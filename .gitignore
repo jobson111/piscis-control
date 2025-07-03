@@ -1,0 +1,15 @@
+# Dependências (NÃO ENVIAR!)
+/backend/node_modules
+/frontend/node_modules
+
+# Ficheiros de build do frontend
+/frontend/dist
+
+# Ficheiros de ambiente (com segredos)
+.env
+*.env
+/backend/.env
+
+# Ficheiros do sistema operativo
+.DS_Store
+Thumbs.db
