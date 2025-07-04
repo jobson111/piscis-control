@@ -21,7 +21,7 @@ module.exports = function (req, res, next) {
 
     try {
         // Verifica se o token é válido usando a mesma chave secreta
-        const decoded = jwt.verify(token, 'SEGREDO_MUITO_SEGURO_PARA_PRODUCAO');
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
         
         // Adiciona o payload decodificado (que contém userId e pisciculturaId) ao objeto da requisição
         req.user = decoded; 
