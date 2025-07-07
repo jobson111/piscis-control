@@ -12,6 +12,8 @@ const alimentacaoRouter = require('./routes/alimentacao.routes');
 const qualidadeAguaRouter = require('./routes/qualidadeAgua.routes');
 const corpoDaguaRouter = require('./routes/corpoDagua.routes');
 const dashboardRouter = require('./routes/dashboard.routes');
+const entradaPeixesRouter = require('./routes/entradaPeixes.routes'); 
+
 
 const cors = require('cors');
 
@@ -38,6 +40,8 @@ app.use('/alimentacao', alimentacaoRouter);
 app.use('/qualidade-agua', qualidadeAguaRouter); // Usando um nome amigável para a URL
 app.use('/corpos-dagua', corpoDaguaRouter);
 app.use('/dashboard', dashboardRouter);
+app.use('/entradas', entradaPeixesRouter); 
+
 
 
 

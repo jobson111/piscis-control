@@ -1,29 +1,26 @@
-// src/routes/piscicultura.routes.js
+// src/routes/piscicultura.routes.js (VERSÃO CORRIGIDA E LIMPA)
 
 const { Router } = require('express');
 const PisciculturaController = require('../controllers/PisciculturaController');
 const authMiddleware = require('../middleware/authMiddleware');
+
 const pisciculturaRouter = Router();
 
-// Aplica o middleware a todas as rotas deste ficheiro
-//pisciculturaRouter.use(authMiddleware);
+// Aplica a segurança a todas as rotas abaixo
+pisciculturaRouter.use(authMiddleware);
 
+// --- Rotas que fazem sentido para um usuário logado ---
 
+// Lista os dados da sua própria piscicultura
+pisciculturaRouter.get('/', PisciculturaController.listAll);
 
-// Rota para cadastrar uma nova piscicultura
-pisciculturaRouter.post('/', authMiddleware, PisciculturaController.create);
+// Busca os detalhes da sua própria piscicultura por ID
+pisciculturaRouter.get('/:id', PisciculturaController.getById);
 
-// Rota para buscar uma piscicultura por ID
-pisciculturaRouter.get('/:id', authMiddleware, PisciculturaController.getById);
+// Atualiza os dados da sua própria piscicultura
+pisciculturaRouter.put('/:id', PisciculturaController.update);
 
-// Rota para listar todas as pisciculturas
-pisciculturaRouter.get('/', authMiddleware, PisciculturaController.listAll);
-
-// Rota para atualizar uma piscicultura
-pisciculturaRouter.put('/:id', authMiddleware, PisciculturaController.update);
-
-// Rota para deletar uma piscicultura
-pisciculturaRouter.delete('/:id', authMiddleware, PisciculturaController.delete);
-
+// A rota POST foi removida pois o AuthController lida com a criação no registo.
+// A rota DELETE foi omitida por ser uma operação de alto risco.
 
 module.exports = pisciculturaRouter;

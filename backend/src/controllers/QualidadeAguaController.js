@@ -1,41 +1,37 @@
-// src/controllers/QualidadeAguaController.js (VERSÃO COMPLETA E ATUALIZADA)
+// backend/src/controllers/QualidadeAguaController.js (VERSÃO COMPLETA E SEGURA)
 
 const db = require('../config/db');
 
-// --- CRIAR um novo registro (lógica atualizada) ---
+// --- CRIAR um novo registo ---
 exports.create = async (request, response) => {
-    // Agora podemos receber tanque_id OU corpo_dagua_id
-    const { tanque_id, corpo_dagua_id, piscicultura_id, ph, temperatura_celsius, oxigenio_dissolvido_mg_l, amonia_total_mg_l, nitrito_mg_l, transparencia_cm, observacoes } = request.body;
+    const { pisciculturaId } = request.user;
+    const { tanque_id, corpo_dagua_id, ph, temperatura_celsius, oxigenio_dissolvido_mg_l, observacoes } = request.body;
 
-    // Validação: garante que ou tanque_id ou corpo_dagua_id foi enviado, mas não ambos.
     if ((!tanque_id && !corpo_dagua_id) || (tanque_id && corpo_dagua_id)) {
         return response.status(400).json({ error: 'Forneça `tanque_id` OU `corpo_dagua_id`, mas não ambos.' });
     }
-
     try {
         let sql, values;
-        // Monta a query dinamicamente baseado no que foi recebido
+        const commonValues = [pisciculturaId, ph, temperatura_celsius, oxigenio_dissolvido_mg_l, observacoes];
+
         if (tanque_id) {
-            sql = `INSERT INTO registros_qualidade_agua (tanque_id, piscicultura_id, ph, temperatura_celsius, ...) VALUES ($1, $2, $3, $4, ...) RETURNING *`;
-            // Adapte os $ e os valores para todas as suas colunas
-            sql = `INSERT INTO registros_qualidade_agua (tanque_id, piscicultura_id, ph, temperatura_celsius, oxigenio_dissolvido_mg_l, amonia_total_mg_l, nitrito_mg_l, transparencia_cm, observacoes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`;
-            values = [tanque_id, piscicultura_id, ph, temperatura_celsius, oxigenio_dissolvido_mg_l, amonia_total_mg_l, nitrito_mg_l, transparencia_cm, observacoes];
-        } else { // se não for tanque_id, é corpo_dagua_id
-            sql = `INSERT INTO registros_qualidade_agua (corpo_dagua_id, piscicultura_id, ph, temperatura_celsius, oxigenio_dissolvido_mg_l, amonia_total_mg_l, nitrito_mg_l, transparencia_cm, observacoes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`;
-            values = [corpo_dagua_id, piscicultura_id, ph, temperatura_celsius, oxigenio_dissolvido_mg_l, amonia_total_mg_l, nitrito_mg_l, transparencia_cm, observacoes];
+            sql = `INSERT INTO registros_qualidade_agua (tanque_id, piscicultura_id, ph, temperatura_celsius, oxigenio_dissolvido_mg_l, observacoes) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`;
+            values = [tanque_id, ...commonValues];
+        } else {
+            sql = `INSERT INTO registros_qualidade_agua (corpo_dagua_id, piscicultura_id, ph, temperatura_celsius, oxigenio_dissolvido_mg_l, observacoes) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`;
+            values = [corpo_dagua_id, ...commonValues];
         }
-        
         const result = await db.query(sql, values);
         return response.status(201).json(result.rows[0]);
-
     } catch (error) {
-        console.error('Erro ao registrar qualidade da água:', error);
+        console.error('Erro ao registar qualidade da água:', error);
         return response.status(500).json({ error: 'Erro interno do servidor' });
     }
 };
 
-// --- LISTAR registros (lógica atualizada) ---
+// --- LISTAR registos (lógica de segurança adicionada) ---
 exports.list = async (request, response) => {
+    const { pisciculturaId } = request.user;
     const { tanque_id, corpo_dagua_id } = request.query;
 
     if (!tanque_id && !corpo_dagua_id) {
@@ -45,32 +41,39 @@ exports.list = async (request, response) => {
     try {
         let sql, values;
         if (tanque_id) {
-            sql = 'SELECT * FROM registros_qualidade_agua WHERE tanque_id = $1 ORDER BY data_medicao DESC';
-            values = [tanque_id];
+            // Agora a consulta também verifica o pisciculturaId
+            sql = 'SELECT * FROM registros_qualidade_agua WHERE tanque_id = $1 AND piscicultura_id = $2 ORDER BY data_medicao DESC';
+            values = [tanque_id, pisciculturaId];
         } else {
-            sql = 'SELECT * FROM registros_qualidade_agua WHERE corpo_dagua_id = $1 ORDER BY data_medicao DESC';
-            values = [corpo_dagua_id];
+            // E aqui também
+            sql = 'SELECT * FROM registros_qualidade_agua WHERE corpo_dagua_id = $1 AND piscicultura_id = $2 ORDER BY data_medicao DESC';
+            values = [corpo_dagua_id, pisciculturaId];
         }
-
         const result = await db.query(sql, values);
         return response.status(200).json(result.rows);
     } catch (error) {
-        console.error('Erro ao listar registros de qualidade da água:', error);
+        console.error('Erro ao listar registos de qualidade da água:', error);
         return response.status(500).json({ error: 'Erro interno do servidor' });
     }
 };
 
-// ... a função delete pode permanecer a mesma, pois deleta por 'id' do registro ...
+// --- DELETAR um registo (lógica de segurança adicionada) ---
 exports.delete = async (request, response) => {
+    const { pisciculturaId } = request.user;
     const { id } = request.params;
+
     try {
-        const result = await db.query('DELETE FROM registros_qualidade_agua WHERE id = $1', [id]);
+        // Agora só apaga se o ID do registo e o ID da piscicultura corresponderem
+        const result = await db.query(
+            'DELETE FROM registros_qualidade_agua WHERE id = $1 AND piscicultura_id = $2',
+            [id, pisciculturaId]
+        );
         if (result.rowCount === 0) {
-            return response.status(404).json({ error: 'Registro de qualidade da água não encontrado' });
+            return response.status(404).json({ error: 'Registo de qualidade da água não encontrado ou não pertence à sua piscicultura.' });
         }
         return response.status(204).send();
     } catch (error) {
-        console.error('Erro ao deletar registro de qualidade da água:', error);
+        console.error('Erro ao deletar registo de qualidade da água:', error);
         return response.status(500).json({ error: 'Erro interno do servidor' });
     }
 };

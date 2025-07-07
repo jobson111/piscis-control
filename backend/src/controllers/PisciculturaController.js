@@ -1,99 +1,73 @@
-// src/controllers/PisciculturaController.js
+// backend/src/controllers/PisciculturaController.js (VERSÃO COMPLETA E SEGURA)
 
-const db = require('../config/db'); // Importa nossa conexão com o banco
+const db = require('../config/db');
 
-// Controller para CRIAR uma nova piscicultura (Create)
-exports.create = async (request, response) => {
-    const { nome_fantasia, cnpj } = request.body;
+// Lista apenas a piscicultura do usuário logado
+exports.listAll = async (req, res) => {
+    const { pisciculturaId } = req.user;
 
     try {
-        const sql = 'INSERT INTO pisciculturas (nome_fantasia, cnpj) VALUES ($1, $2) RETURNING *';
-        const values = [nome_fantasia, cnpj];
-        
-        const result = await db.query(sql, values);
-        
-        return response.status(201).json(result.rows[0]);
-
+        const result = await db.query('SELECT * FROM pisciculturas WHERE id = $1', [pisciculturaId]);
+        return res.status(200).json(result.rows);
     } catch (error) {
-        console.error('Erro ao criar piscicultura:', error);
-        return response.status(500).json({ error: 'Erro interno do servidor' });
+        console.error("Erro ao listar piscicultura:", error);
+        return res.status(500).json({ error: "Erro interno do servidor" });
     }
 };
 
-// Controller para LISTAR todas as pisciculturas (Read)
-exports.listAll = async (request, response) =>
-     {
-    try {
-        const result = await db.query('SELECT * FROM pisciculturas ORDER BY id ASC');
-        return response.status(200).json(result.rows);
+// Busca os detalhes de uma piscicultura, mas só se pertencer ao usuário logado
+exports.getById = async (req, res) => {
+    const { pisciculturaId } = req.user;
+    const { id } = req.params;
 
-    } catch (error) {
-        console.error('Erro ao listar pisciculturas:', error);
-        return response.status(500).json({ error: 'Erro interno do servidor' });
+    // Converte o ID da URL para número para garantir a comparação correta
+    const idDaUrl = parseInt(id, 10);
+
+    // Verificação de autorização: o ID na URL é o mesmo do token?
+    if (idDaUrl !== pisciculturaId) {
+        return res.status(403).json({ error: 'Acesso não autorizado a esta piscicultura.' });
     }
 
-    
-};
-
-// Adicione este código NOVO dentro do arquivo PisciculturaController.js
-
-// Controller para BUSCAR uma piscicultura por ID (Read)
-exports.getById = async (request, response) => {
-    const { id } = request.params; // Pega o ID que vem na URL
-
     try {
-        const result = await db.query('SELECT * FROM pisciculturas WHERE id = $1', [id]);
-
+        const result = await db.query('SELECT * FROM pisciculturas WHERE id = $1', [idDaUrl]);
         if (result.rowCount === 0) {
-            return response.status(404).json({ error: 'Piscicultura não encontrada' });
+            return res.status(404).json({ error: 'Piscicultura não encontrada' });
         }
-
-        return response.status(200).json(result.rows[0]);
-
+        return res.status(200).json(result.rows[0]);
     } catch (error) {
         console.error('Erro ao buscar piscicultura por ID:', error);
-        return response.status(500).json({ error: 'Erro interno do servidor' });
+        return res.status(500).json({ error: 'Erro interno do servidor' });
     }
 };
 
-// Controller para ATUALIZAR uma piscicultura (Update)
-exports.update = async (request, response) => {
-    const { id } = request.params;
-    const { nome_fantasia, cnpj } = request.body;
+// Atualiza os dados da piscicultura do usuário logado
+exports.update = async (req, res) => {
+    const { pisciculturaId } = req.user;
+    const { id } = req.params;
+    const { nome_fantasia, razao_social } = req.body;
+
+    const idDaUrl = parseInt(id, 10);
+
+    // Verificação de autorização
+    if (idDaUrl !== pisciculturaId) {
+        return res.status(403).json({ error: 'Não é permitido alterar dados de outra piscicultura.' });
+    }
 
     try {
-        const sql = 'UPDATE pisciculturas SET nome_fantasia = $1, cnpj = $2 WHERE id = $3 RETURNING *';
-        const values = [nome_fantasia, cnpj, id];
-
-        const result = await db.query(sql, values);
-
+        const result = await db.query(
+            'UPDATE pisciculturas SET nome_fantasia = $1, razao_social = $2 WHERE id = $3 RETURNING *',
+            [nome_fantasia, razao_social, idDaUrl]
+        );
         if (result.rowCount === 0) {
-            return response.status(404).json({ error: 'Piscicultura não encontrada' });
+            return res.status(404).json({ error: 'Piscicultura não encontrada para atualizar.' });
         }
-
-        return response.status(200).json(result.rows[0]);
-
+        return res.status(200).json(result.rows[0]);
     } catch (error) {
         console.error('Erro ao atualizar piscicultura:', error);
-        return response.status(500).json({ error: 'Erro interno do servidor' });
+        return res.status(500).json({ error: 'Erro interno do servidor' });
     }
 };
 
-// Controller para DELETAR uma piscicultura (Delete)
-exports.delete = async (request, response) => {
-    const { id } = request.params;
-
-    try {
-        const result = await db.query('DELETE FROM pisciculturas WHERE id = $1', [id]);
-
-        if (result.rowCount === 0) {
-            return response.status(404).json({ error: 'Piscicultura não encontrada' });
-        }
-
-        return response.status(204).send(); // 204 No Content -> sucesso, sem conteúdo na resposta
-
-    } catch (error) {
-        console.error('Erro ao deletar piscicultura:', error);
-        return response.status(500).json({ error: 'Erro interno do servidor' });
-    }
-};
+// Nota: Uma função de 'create' não é necessária aqui, pois ela é tratada pelo AuthController no registo.
+// Nota: Uma função de 'delete' para pisciculturas é uma operação de alto risco (apagaria tudo)
+// e por isso não a implementaremos por agora.
