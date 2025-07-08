@@ -56,6 +56,31 @@ exports.list = async (request, response) => {
         return response.status(500).json({ error: 'Erro interno do servidor' });
     }
 };
+//  ----  ATUALIZAR QUALIDADE DA AGUA
+exports.update = async (request, response) => {
+    const { pisciculturaId } = request.user;
+    const { id } = request.params; // ID do registo a ser atualizado
+    const { ph, temperatura_celsius, oxigenio_dissolvido_mg_l, data_medicao } = request.body;
+
+    try {
+        const sql = `
+            UPDATE registros_qualidade_agua 
+            SET ph = $1, temperatura_celsius = $2, oxigenio_dissolvido_mg_l = $3, data_medicao = $4
+            WHERE id = $5 AND piscicultura_id = $6
+            RETURNING *
+        `;
+        const values = [ph, temperatura_celsius, oxigenio_dissolvido_mg_l, data_medicao, id, pisciculturaId];
+
+        const result = await db.query(sql, values);
+        if (result.rowCount === 0) {
+            return response.status(404).json({ error: 'Registo não encontrado ou não pertence à sua piscicultura.' });
+        }
+        return response.status(200).json(result.rows[0]);
+    } catch (error) {
+        console.error('Erro ao atualizar registo de qualidade da água:', error);
+        return response.status(500).json({ error: 'Erro interno do servidor' });
+    }
+};
 
 // --- DELETAR um registo (lógica de segurança adicionada) ---
 exports.delete = async (request, response) => {

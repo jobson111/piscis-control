@@ -17,7 +17,7 @@ import {
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import LoteList from '../components/LoteList';
-import LoteForm from '../components/LoteForm';
+//import LoteForm from '../components/LoteForm';
 import QualidadeAguaList from '../components/QualidadeAguaList';
 import QualidadeAguaForm from '../components/QualidadeAguaForm';
 
@@ -45,6 +45,8 @@ function TanqueDetalhesPage() {
   // State para o Modal de Edição de Lote
   const [openModal, setOpenModal] = useState(false);
   const [loteParaEditar, setLoteParaEditar] = useState(null);
+  const [openQualidadeAguaModal, setOpenQualidadeAguaModal] = useState(false);
+  const [qualidadeAguaParaEditar, setQualidadeAguaParaEditar] = useState(null);
 
   // --- DATA FETCHING ---
   useEffect(() => {
@@ -71,9 +73,6 @@ function TanqueDetalhesPage() {
   // --- HANDLER FUNCTIONS ---
 
   // Para Lotes
-  function handleNovoLote(novoLote) {
-    setLotes(currentLotes => [novoLote, ...currentLotes]);
-  }
 
   async function handleDeleteLote(id) {
     if (window.confirm('Tem certeza que deseja deletar este lote?')) {
@@ -133,6 +132,44 @@ function TanqueDetalhesPage() {
     setRegistrosQualidadeAgua(currentRegistros => [novoRegistro, ...currentRegistros]);
   }
 
+  const handleDeleteQualidadeAgua = async (id) => {
+    if (window.confirm('Tem certeza que deseja apagar este registo?')) {
+      try {
+        await api.delete(`/qualidade-agua/${id}`);
+        setRegistrosQualidadeAgua(registrosQualidadeAgua.filter(r => r.id !== id));
+      } catch (error) {
+        console.error("Erro ao apagar registo de qualidade da água:", error);
+        alert('Falha ao apagar registo.');
+      }
+    }
+  };
+
+  const handleOpenQualidadeAguaModal = (registro) => {
+    setQualidadeAguaParaEditar({
+      ...registro,
+      data_medicao: new Date(registro.data_medicao).toISOString().split('T')[0]
+    });
+    setOpenQualidadeAguaModal(true);
+  };
+
+  const handleCloseQualidadeAguaModal = () => setOpenQualidadeAguaModal(false);
+
+  const handleQualidadeAguaUpdateChange = (e) => {
+    setQualidadeAguaParaEditar({...qualidadeAguaParaEditar, [e.target.name]: e.target.value});
+  };
+
+  const handleUpdateQualidadeAguaSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await api.put(`/qualidade-agua/${qualidadeAguaParaEditar.id}`, qualidadeAguaParaEditar);
+      setRegistrosQualidadeAgua(registrosQualidadeAgua.map(r => r.id === qualidadeAguaParaEditar.id ? response.data : r));
+      handleCloseQualidadeAguaModal();
+    } catch (error) {
+      console.error("Erro ao atualizar registo de qualidade da água:", error);
+      alert('Falha ao atualizar registo.');
+    }
+  };
+
   // --- RENDER ---
   if (loading) return <CircularProgress />;
   if (!tanque) return <Typography>Tanque não encontrado.</Typography>;
@@ -153,16 +190,12 @@ function TanqueDetalhesPage() {
         {/* Coluna da Esquerda: Lotes */}
         <Box>
           <LoteList lotes={lotes} onEdit={handleOpenModal} onDelete={handleDeleteLote} />
-          <LoteForm 
-            pisciculturaId={tanque.piscicultura_id} 
-            tanqueId={tanqueId}
-            onLoteCadastrado={handleNovoLote}
-          />
+         
         </Box>
 
         {/* Coluna da Direita: Qualidade da Água */}
         <Box>
-            <QualidadeAguaList registros={registrosQualidadeAgua} />
+            <QualidadeAguaList registros={registrosQualidadeAgua} onEdit={handleOpenQualidadeAguaModal} onDelete={handleDeleteQualidadeAgua} />
             <QualidadeAguaForm 
                 pisciculturaId={tanque.piscicultura_id}
                 tanqueId={tanqueId}
@@ -184,6 +217,21 @@ function TanqueDetalhesPage() {
                <TextField label="Data de Saída Estimada" name="data_saida_estimada" type="date" value={loteParaEditar.data_saida_estimada || ''} onChange={handleUpdateChange} fullWidth InputLabelProps={{ shrink: true }}/>
                <TextField label="Data de Saída Real" name="data_saida_real" type="date" value={loteParaEditar.data_saida_real || ''} onChange={handleUpdateChange} fullWidth InputLabelProps={{ shrink: true }}/>
                <Button type="submit" variant="contained">Salvar Alterações</Button>
+            </Box>
+          )}
+        </Box>
+      </Modal>
+      {/* --- NOVO: Modal para Editar Qualidade da Água --- */}
+      <Modal open={openQualidadeAguaModal} onClose={handleCloseQualidadeAguaModal}>
+        <Box sx={style}>
+          <Typography variant="h6" component="h2">Editar Registo de Qualidade da Água</Typography>
+          {qualidadeAguaParaEditar && (
+            <Box component="form" onSubmit={handleUpdateQualidadeAguaSubmit} sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <TextField label="Data da Medição" name="data_medicao" type="date" value={qualidadeAguaParaEditar.data_medicao} onChange={handleQualidadeAguaUpdateChange} InputLabelProps={{ shrink: true }} fullWidth required />
+              <TextField label="pH" name="ph" type="number" inputProps={{step: "0.1"}} value={qualidadeAguaParaEditar.ph || ''} onChange={handleQualidadeAguaUpdateChange} fullWidth />
+              <TextField label="Temperatura (°C)" name="temperatura_celsius" type="number" inputProps={{step: "0.1"}} value={qualidadeAguaParaEditar.temperatura_celsius || ''} onChange={handleQualidadeAguaUpdateChange} fullWidth />
+              <TextField label="Oxigénio Dissolvido (mg/L)" name="oxigenio_dissolvido_mg_l" type="number" inputProps={{step: "0.1"}} value={qualidadeAguaParaEditar.oxigenio_dissolvido_mg_l || ''} onChange={handleQualidadeAguaUpdateChange} fullWidth />
+              <Button type="submit" variant="contained">Salvar Alterações</Button>
             </Box>
           )}
         </Box>

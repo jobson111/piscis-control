@@ -13,6 +13,8 @@ const qualidadeAguaRouter = require('./routes/qualidadeAgua.routes');
 const corpoDaguaRouter = require('./routes/corpoDagua.routes');
 const dashboardRouter = require('./routes/dashboard.routes');
 const entradaPeixesRouter = require('./routes/entradaPeixes.routes'); 
+const manejoRouter = require('./routes/manejo.routes');
+
 
 
 const cors = require('cors');
@@ -41,6 +43,7 @@ app.use('/qualidade-agua', qualidadeAguaRouter); // Usando um nome amigável par
 app.use('/corpos-dagua', corpoDaguaRouter);
 app.use('/dashboard', dashboardRouter);
 app.use('/entradas', entradaPeixesRouter); 
+app.use('/manejos', manejoRouter);
 
 
 

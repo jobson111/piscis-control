@@ -6,6 +6,7 @@ import DashboardIcon from '@mui/icons-material/Dashboard';
 import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import CompareArrowsIcon from '@mui/icons-material/CompareArrows'; // Um bom ícone para transferência
 
 const drawerWidth = 240;
 
@@ -32,6 +33,13 @@ function MainLayout({ children }) {
                     <ListItemButton>
                         <ListItemIcon><AddShoppingCartIcon /></ListItemIcon>
                         <ListItemText primary="Entrada de Peixes" />
+                    </ListItemButton>
+                </ListItem>
+                {/* --- NOVO ITEM DE MENU --- */}
+                <ListItem disablePadding component={NavLink} to="/manejos/transferencia" style={{color: 'inherit'}}>
+                    <ListItemButton>
+                        <ListItemIcon><CompareArrowsIcon /></ListItemIcon>
+                        <ListItemText primary="Transferência" />
                     </ListItemButton>
                 </ListItem>
             </List>

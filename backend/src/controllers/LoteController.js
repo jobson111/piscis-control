@@ -7,10 +7,14 @@ const db = require('../config/db');
 
 // --- FUNÇÃO DE BUSCA UNIFICADA (LISTAR E BUSCAR POR ID) ---
 // Esta função agora é 100% segura, usando o ID do token.
+// --- FUNÇÃO DE BUSCA UNIFICADA E SEGURA (LISTAR E BUSCAR POR ID) ---
 exports.find = async (request, response) => {
-    const { pisciculturaId } = request.user; // ID seguro vindo do token
-    const loteIdParam = request.params.id;   // ID do lote vindo da URL (ex: /lotes/5)
-    const { tanque_id } = request.query;   // ID do tanque vindo da query (ex: /lotes?tanque_id=3)
+    // ID seguro vindo do token de autenticação
+    const { pisciculturaId } = request.user;
+    
+    // Parâmetros que podem vir da requisição
+    const loteIdParam = request.params.id;         // da URL, ex: /lotes/5
+    const { tanque_id, status } = request.query;   // da query string, ex: /lotes?status=Ativo
 
     try {
         const baseQuery = `
@@ -21,36 +25,39 @@ exports.find = async (request, response) => {
             LEFT JOIN tanques t ON l.tanque_id = t.id
         `;
         
-        let sql;
-        let values;
+        let conditions = ['l.piscicultura_id = $1'];
+        let values = [pisciculturaId];
+        let paramIndex = 2;
 
         if (loteIdParam) {
-            // Cenário 1: Buscar um lote específico pelo seu ID
-            const id = parseInt(loteIdParam, 10);
-            if (isNaN(id)) return response.status(400).json({ error: 'ID de lote inválido.' });
-            
-            sql = `${baseQuery} WHERE l.id = $1 AND l.piscicultura_id = $2`;
-            values = [id, pisciculturaId];
-
-        } else if (tanque_id) {
-            // Cenário 2: Listar todos os lotes de um tanque específico
-            sql = `${baseQuery} WHERE l.tanque_id = $1 AND l.piscicultura_id = $2 ORDER BY l.data_entrada DESC`;
-            values = [tanque_id, pisciculturaId];
-
-        } else {
-            // Cenário 3: Listar todos os lotes da piscicultura
-            sql = `${baseQuery} WHERE l.piscicultura_id = $1 ORDER BY l.data_entrada DESC`;
-            values = [pisciculturaId];
+            // Se um ID foi passado na URL, busca um lote específico
+            conditions.push(`l.id = $${paramIndex++}`);
+            values.push(parseInt(loteIdParam, 10));
         }
+
+        if (tanque_id) {
+            // Se um tanque_id foi passado na query, adiciona o filtro
+            conditions.push(`l.tanque_id = $${paramIndex++}`);
+            values.push(tanque_id);
+        }
+
+        if (status) {
+            // Se um status foi passado na query, adiciona o filtro
+            conditions.push(`l.status = $${paramIndex++}`);
+            values.push(status);
+        }
+
+        // Monta a consulta final
+        const sql = `${baseQuery} WHERE ${conditions.join(' AND ')} ORDER BY l.data_entrada DESC, l.id DESC`;
 
         const result = await db.query(sql, values);
 
-        // Se a busca for por ID e não encontrar nada, retorna 404. Senão, retorna o resultado.
+        // Se a busca foi por um ID específico e não encontrou nada, retorna 404
         if (loteIdParam && result.rowCount === 0) {
             return response.status(404).json({ error: 'Lote não encontrado ou não pertence à sua piscicultura.' });
         }
         
-        // Se a busca for por ID, retorna um único objeto, senão retorna a lista.
+        // Se a busca foi por ID, retorna um único objeto; senão, retorna a lista (array)
         return response.status(200).json(loteIdParam ? result.rows[0] : result.rows);
 
     } catch (error) {

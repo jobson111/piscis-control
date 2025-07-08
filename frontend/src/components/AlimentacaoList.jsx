@@ -1,25 +1,43 @@
-// src/components/AlimentacaoList.jsx
-import { List, ListItem, ListItemText, Typography, Paper } from '@mui/material';
+// src/components/AlimentacaoList.jsx (VERSÃO ATUALIZADA COM BOTÕES)
 
-function AlimentacaoList({ registros }) {
+import { List, ListItem, ListItemText, Typography, Paper, IconButton, Box } from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+
+// O componente agora recebe onEdit e onDelete
+function AlimentacaoList({ registros, onEdit, onDelete }) {
   return (
-    <Paper elevation={2} sx={{ p: 2, mt: 4 }}>
+    <Paper elevation={2} sx={{ p: 2, mt: 2 }}>
       <Typography variant="h6" gutterBottom>Histórico de Alimentação</Typography>
       <List>
         {registros.length > 0 ? (
           registros.map(reg => (
-            <ListItem key={reg.id} divider>
+            <ListItem 
+              key={reg.id} 
+              divider
+              secondaryAction={
+                <Box>
+                  <IconButton edge="end" aria-label="edit" onClick={() => onEdit(reg)}>
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton edge="end" aria-label="delete" onClick={() => onDelete(reg.id)}>
+                    <DeleteIcon />
+                  </IconButton>
+                </Box>
+              }
+            >
               <ListItemText 
-                primary={`${reg.quantidade_kg} kg de ${reg.tipo_racao}`}
-                secondary={`Data: ${new Date(reg.data_alimentacao).toLocaleDateString()}`}
+                primary={`Quantidade: ${reg.quantidade_kg}kg de ${reg.tipo_racao || 'N/A'}`}
+                secondary={`Data: ${new Date(reg.data_alimentacao).toLocaleString('pt-BR')}`}
               />
             </ListItem>
           ))
         ) : (
-          <Typography>Nenhum registo de alimentação para este lote.</Typography>
+          <Typography sx={{ p: 2 }}>Nenhum registo de alimentação para este lote.</Typography>
         )}
       </List>
     </Paper>
   );
 }
+
 export default AlimentacaoList;

@@ -11,6 +11,8 @@ import TanqueDetalhesPage from './pages/TanqueDetalhesPage';
 import LoteDetalhesPage from './pages/LoteDetalhesPage';
 import PisciculturaDetalhesPage from './pages/PisciculturaDetalhesPage';
 import HomePage from './pages/HomePage';
+import ManejoTransferenciaPage from './pages/ManejoTransferenciaPage'; // Importa a nova página
+
 
 function App() {
   const { token } = useAuth();
@@ -30,6 +32,7 @@ function App() {
         <Route path="/tanques/:tanqueId" element={<MainLayout><TanqueDetalhesPage /></MainLayout>} />
         <Route path="/lotes/:loteId" element={<MainLayout><LoteDetalhesPage /></MainLayout>} />
         <Route path="/entradas" element={<MainLayout><EntradasPage /></MainLayout>} />
+        <Route path="/manejos/transferencia" element={<MainLayout><ManejoTransferenciaPage /></MainLayout>} />
 
         {/* Adicione outras rotas principais aqui */}
       </Routes>

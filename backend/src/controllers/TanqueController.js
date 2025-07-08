@@ -4,27 +4,30 @@ const db = require('../config/db');
 
 // --- LISTAR todos os tanques da piscicultura do usuário logado ---
 exports.listByPiscicultura = async (request, response) => {
-    // 1. A ÚNICA fonte de verdade é o token do usuário. Ignoramos o que vem da query.
     const { pisciculturaId } = request.user;
 
     try {
+        // A consulta SQL agora também busca a quantidade e espécie do lote ativo, se houver
         const sql = `
             SELECT 
                 t.*, 
+                l.id as lote_ativo_id,
+                l.quantidade_atual as lote_ativo_quantidade,
+                l.especie as lote_ativo_especie,
                 COUNT(l.id) > 0 as ocupado
             FROM 
                 tanques t
             LEFT JOIN 
                 lotes l ON t.id = l.tanque_id AND l.status = 'Ativo'
             WHERE 
-                t.piscicultura_id = $1 -- 2. A consulta usa o ID seguro.
+                t.piscicultura_id = $1
             GROUP BY 
-                t.id
+                t.id, l.id, l.quantidade_atual, l.especie
             ORDER BY 
                 LENGTH(t.nome_identificador), t.nome_identificador ASC;
         `;
         
-        const result = await db.query(sql, [pisciculturaId]); // 3. Passamos o ID seguro para a consulta.
+        const result = await db.query(sql, [pisciculturaId]);
         return response.status(200).json(result.rows);
 
     } catch (error) {
