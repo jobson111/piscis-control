@@ -11,7 +11,16 @@ import TanqueDetalhesPage from './pages/TanqueDetalhesPage';
 import LoteDetalhesPage from './pages/LoteDetalhesPage';
 import PisciculturaDetalhesPage from './pages/PisciculturaDetalhesPage';
 import HomePage from './pages/HomePage';
-import ManejoTransferenciaPage from './pages/ManejoTransferenciaPage'; // Importa a nova página
+import ManejoTransferenciaPage from './pages/ManejoTransferenciaPage'; 
+import ClientesPage from './pages/ClientesPage'; // Importe a nova página
+import FormasPagamentoPage from './pages/FormasPagamentoPage'; // Importa pagina de pagamento
+import VendasPage from './pages/VendasPage'; // Importe a nova página de vendas
+import CargosPage from './pages/CargosPage'; // Importe a nova página de Cargos
+import UsuariosPage from './pages/UsuariosPage'; // Importe a nova pagina usuarios
+
+
+
+
 
 
 function App() {
@@ -33,6 +42,13 @@ function App() {
         <Route path="/lotes/:loteId" element={<MainLayout><LoteDetalhesPage /></MainLayout>} />
         <Route path="/entradas" element={<MainLayout><EntradasPage /></MainLayout>} />
         <Route path="/manejos/transferencia" element={<MainLayout><ManejoTransferenciaPage /></MainLayout>} />
+        <Route path="/clientes" element={<MainLayout><ClientesPage /></MainLayout>} />
+        <Route path="/formas-pagamento" element={<MainLayout><FormasPagamentoPage /></MainLayout>} />
+        <Route path="/vendas" element={<MainLayout><VendasPage /></MainLayout>} />
+        <Route path="/cargos" element={<MainLayout><CargosPage /></MainLayout>} />
+        <Route path="/usuarios" element={<MainLayout><UsuariosPage /></MainLayout>} />
+
+
 
         {/* Adicione outras rotas principais aqui */}
       </Routes>

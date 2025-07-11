@@ -1,11 +1,12 @@
-// src/routes/dashboard.routes.js
+// backend/src/routes/dashboard.routes.js
 const { Router } = require('express');
 const DashboardController = require('../controllers/DashboardController');
 const authMiddleware = require('../middleware/authMiddleware');
 
 const dashboardRouter = Router();
+dashboardRouter.use(authMiddleware);
 
-// A rota será GET /dashboard e já está protegida pelo middleware
-dashboardRouter.get('/', authMiddleware, DashboardController.getDashboardData);
+// Rota para buscar os nossos novos KPIs
+dashboardRouter.get('/kpis', DashboardController.getKpis);
 
 module.exports = dashboardRouter;

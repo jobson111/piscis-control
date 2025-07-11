@@ -7,6 +7,12 @@ import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows'; // Um bom ícone para transferência
+import PeopleIcon from '@mui/icons-material/People'; // Ícone para Clientes
+import PaymentIcon from '@mui/icons-material/Payment'; //Icone de forma pagamentos
+import PointOfSaleIcon from '@mui/icons-material/PointOfSale'; // Ícone para Vendas
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings'; // Ícone para Cargos
+import GroupIcon from '@mui/icons-material/Group'; //icone para utilizadores- usuarios
+
 
 const drawerWidth = 240;
 
@@ -23,23 +29,60 @@ function MainLayout({ children }) {
             <Toolbar />
             <Divider />
             <List>
+                {/* --- NOVO ITEM DE MENU DashBoard --- */}
                 <ListItem disablePadding component={NavLink} to="/" style={{color: 'inherit'}}>
                     <ListItemButton>
                         <ListItemIcon><DashboardIcon /></ListItemIcon>
                         <ListItemText primary="Dashboard" />
                     </ListItemButton>
                 </ListItem>
+                {/* --- NOVO ITEM DE MENU Entrada de Peixes --- */}
                 <ListItem disablePadding component={NavLink} to="/entradas" style={{color: 'inherit'}}>
                     <ListItemButton>
                         <ListItemIcon><AddShoppingCartIcon /></ListItemIcon>
                         <ListItemText primary="Entrada de Peixes" />
                     </ListItemButton>
                 </ListItem>
-                {/* --- NOVO ITEM DE MENU --- */}
+                {/* --- NOVO ITEM DE MENU transferencia --- */}
                 <ListItem disablePadding component={NavLink} to="/manejos/transferencia" style={{color: 'inherit'}}>
                     <ListItemButton>
                         <ListItemIcon><CompareArrowsIcon /></ListItemIcon>
                         <ListItemText primary="Transferência" />
+                    </ListItemButton>
+                </ListItem>
+                {/* --- NOVO ITEM DE MENU Clientes --- */}
+                <ListItem disablePadding component={NavLink} to="/clientes" style={{color: 'inherit'}}>
+                    <ListItemButton>
+                        <ListItemIcon><PeopleIcon /></ListItemIcon>
+                        <ListItemText primary="Clientes" />
+                    </ListItemButton>
+                </ListItem>
+                {/* --- NOVO ITEM DE MENU VENDAS --- */}
+                <ListItem disablePadding component={NavLink} to="/vendas" style={{color: 'inherit'}}>
+                    <ListItemButton>
+                        <ListItemIcon><PointOfSaleIcon /></ListItemIcon>
+                        <ListItemText primary="Vendas" />
+                    </ListItemButton>
+                </ListItem>
+                {/* --- NOVO ITEM DE MENU Pagamentos --- */}
+                <ListItem disablePadding component={NavLink} to="/formas-pagamento" style={{color: 'inherit'}}>
+                    <ListItemButton>
+                        <ListItemIcon><PaymentIcon /></ListItemIcon>
+                        <ListItemText primary="Forma de Pagamentos" />
+                    </ListItemButton>
+                </ListItem>
+                {/* --- NOVO ITEM DE MENU utilizadores - usuarios --- */}
+                <ListItem disablePadding component={NavLink} to="/usuarios" style={{color: 'inherit'}}>
+                    <ListItemButton>
+                        <ListItemIcon><GroupIcon /></ListItemIcon>
+                        <ListItemText primary="Utilizadores" />
+                    </ListItemButton>
+                </ListItem>
+                {/* --- NOVO ITEM DE MENU Cargos e Permissoes --- */}
+                <ListItem disablePadding component={NavLink} to="/cargos" style={{color: 'inherit'}}>
+                    <ListItemButton>
+                        <ListItemIcon><AdminPanelSettingsIcon /></ListItemIcon>
+                        <ListItemText primary="Cargos e Permissões" />
                     </ListItemButton>
                 </ListItem>
             </List>

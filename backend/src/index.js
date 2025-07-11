@@ -14,6 +14,15 @@ const corpoDaguaRouter = require('./routes/corpoDagua.routes');
 const dashboardRouter = require('./routes/dashboard.routes');
 const entradaPeixesRouter = require('./routes/entradaPeixes.routes'); 
 const manejoRouter = require('./routes/manejo.routes');
+const clienteRouter = require('./routes/cliente.routes');
+const formaPagamentoRouter = require('./routes/formaPagamento.routes');
+const vendaRouter = require('./routes/venda.routes');
+const cargoRouter = require('./routes/cargo.routes');
+const usuarioRouter = require('./routes/usuario.routes');
+
+
+
+
 
 
 
@@ -44,6 +53,15 @@ app.use('/corpos-dagua', corpoDaguaRouter);
 app.use('/dashboard', dashboardRouter);
 app.use('/entradas', entradaPeixesRouter); 
 app.use('/manejos', manejoRouter);
+app.use('/clientes', clienteRouter);
+app.use('/formas-pagamento', formaPagamentoRouter);
+app.use('/vendas', vendaRouter);
+app.use('/cargos', cargoRouter);
+app.use('/usuarios', usuarioRouter);
+
+
+
+
 
 
 

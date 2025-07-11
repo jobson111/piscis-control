@@ -48,7 +48,7 @@ exports.find = async (request, response) => {
         }
 
         // Monta a consulta final
-        const sql = `${baseQuery} WHERE ${conditions.join(' AND ')} ORDER BY l.data_entrada DESC, l.id DESC`;
+        const sql = `${baseQuery} WHERE ${conditions.join(' AND ')} ORDER BY LENGTH(t.nome_identificador), t.nome_identificador, l.data_entrada DESC`;
 
         const result = await db.query(sql, values);
 
