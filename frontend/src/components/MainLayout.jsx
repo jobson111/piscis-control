@@ -12,6 +12,7 @@ import PaymentIcon from '@mui/icons-material/Payment'; //Icone de forma pagament
 import PointOfSaleIcon from '@mui/icons-material/PointOfSale'; // Ícone para Vendas
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings'; // Ícone para Cargos
 import GroupIcon from '@mui/icons-material/Group'; //icone para utilizadores- usuarios
+import ProtectedComponent from './ProtectedComponent';
 
 
 const drawerWidth = 240;
@@ -79,12 +80,14 @@ function MainLayout({ children }) {
                     </ListItemButton>
                 </ListItem>
                 {/* --- NOVO ITEM DE MENU Cargos e Permissoes --- */}
-                <ListItem disablePadding component={NavLink} to="/cargos" style={{color: 'inherit'}}>
-                    <ListItemButton>
-                        <ListItemIcon><AdminPanelSettingsIcon /></ListItemIcon>
-                        <ListItemText primary="Cargos e Permissões" />
-                    </ListItemButton>
-                </ListItem>
+                <ProtectedComponent requiredPermission="cargos:gerir">
+                    <ListItem disablePadding component={NavLink} to="/cargos" style={{color: 'inherit'}}>
+                        <ListItemButton>
+                            <ListItemIcon><AdminPanelSettingsIcon /></ListItemIcon>
+                            <ListItemText primary="Cargos e Permissões" />
+                        </ListItemButton>
+                    </ListItem>
+                </ProtectedComponent>
             </List>
             <Divider />
         </div>

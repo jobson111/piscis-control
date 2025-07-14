@@ -17,12 +17,16 @@ function AlimentacaoList({ registros, onEdit, onDelete }) {
               divider
               secondaryAction={
                 <Box>
-                  <IconButton edge="end" aria-label="edit" onClick={() => onEdit(reg)}>
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton edge="end" aria-label="delete" onClick={() => onDelete(reg.id)}>
-                    <DeleteIcon />
-                  </IconButton>
+                  <ProtectedComponent requiredPermission="alimentacao:editar">
+                    <IconButton edge="end" aria-label="edit" onClick={() => onEdit(reg)}>
+                      <EditIcon />
+                    </IconButton>
+                  </ProtectedComponent>  
+                  <ProtectedComponent requiredPermission="alimentacao:apagar">
+                    <IconButton edge="end" aria-label="delete" onClick={() => onDelete(reg.id)}>
+                      <DeleteIcon />
+                    </IconButton>
+                  </ProtectedComponent>
                 </Box>
               }
             >

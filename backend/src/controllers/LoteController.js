@@ -93,6 +93,77 @@ exports.update = async (request, response) => {
     }
 };
 
+// --- FUNÇÃO DE PROJEÇÃO DE CRESCIMENTO (LÓGICA CORRIGIDA) ---
+exports.getProjecaoCrescimento = async (req, res) => {
+    const { pisciculturaId } = req.user;
+    const loteId = parseInt(req.params.id, 10);
+
+    if (isNaN(loteId)) {
+        return res.status(400).json({ error: 'ID de lote inválido.' });
+    }
+
+    try {
+        // 1. Busca todos os dados de referência
+        const [loteResult, curvaResult, fatoresResult] = await Promise.all([
+            db.query("SELECT * FROM lotes WHERE id = $1 AND piscicultura_id = $2 AND status = 'Ativo'", [loteId, pisciculturaId]),
+            db.query("SELECT * FROM curvas_crescimento WHERE tabela_crescimento_id = 1 ORDER BY semana"),
+            db.query("SELECT mes, fator_crescimento FROM fatores_sazonais WHERE piscicultura_id = $1", [pisciculturaId])
+        ]);
+
+        if (loteResult.rowCount === 0) return res.status(404).json({ error: 'Lote ativo não encontrado.' });
+
+        const lote = loteResult.rows[0];
+        const curvaCrescimento = curvaResult.rows;
+        const fatoresMap = new Map(fatoresResult.rows.map(f => [f.mes, parseFloat(f.fator_crescimento)]));
+
+        // 2. Lógica de cálculo da projeção
+        const projecao = [];
+        let pesoAtual = parseFloat(lote.peso_atual_medio_g || lote.peso_inicial_medio_g);
+        const semanasParaProjetar = 12;
+
+        // **LÓGICA NOVA:** Encontra a semana inicial na curva com base no peso atual
+        const faixaInicial = curvaCrescimento.find(faixa => pesoAtual >= parseFloat(faixa.peso_inicial_g) && pesoAtual < parseFloat(faixa.peso_final_g));
+        if (!faixaInicial) return res.status(200).json([]); // Retorna vazio se o peso for maior que o da tabela
+
+        let semanaAtual = faixaInicial.semana;
+        let pesoProjetado = pesoAtual;
+
+        for (let i = 0; i < semanasParaProjetar; i++) {
+            const semanaDeReferencia = semanaAtual + i;
+            
+            // Pega a faixa de referência atual e a da próxima semana
+            const faixaAtualReferencia = curvaCrescimento.find(f => f.semana === semanaDeReferencia);
+            const faixaSeguinteReferencia = curvaCrescimento.find(f => f.semana === semanaDeReferencia + 1);
+
+            // Se não houver uma próxima semana na tabela, para a projeção
+            if (!faixaAtualReferencia || !faixaSeguinteReferencia) break;
+
+            // **LÓGICA NOVA:** O ganho é a diferença do peso final entre a semana seguinte e a atual
+            const ganhoSemanalBase = parseFloat(faixaSeguinteReferencia.peso_final_g) - parseFloat(faixaAtualReferencia.peso_final_g);
+
+            const dataFutura = new Date();
+            dataFutura.setDate(dataFutura.getDate() + (i * 7));
+            const mesFuturo = dataFutura.getMonth() + 1;
+            const fatorSazonal = fatoresMap.get(mesFuturo) || 1.0;
+
+            const ganhoAjustado = ganhoSemanalBase * fatorSazonal;
+            pesoProjetado += ganhoAjustado;
+
+            projecao.push({
+                semana: semanaDeReferencia + 1, // Projetamos o peso no final da semana seguinte
+                peso_estimado: parseFloat(pesoProjetado.toFixed(2))
+            });
+        }
+        
+        // 3. Retorna a projeção
+        res.status(200).json(projecao);
+
+    } catch (error) {
+        console.error("Erro ao calcular projeção de crescimento:", error);
+        res.status(500).json({ error: "Erro interno do servidor." });
+    }
+};
+
 // --- DELETAR um lote (Delete) ---
 exports.delete = async (request, response) => {
     const { pisciculturaId } = request.user;

@@ -1,78 +1,101 @@
-// src/context/AuthContext.jsx (VERSÃO FINAL E CORRIGIDA)
+// frontend/src/context/AuthContext.jsx (VERSÃO COM EXPORTS CORRIGIDOS)
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 import api from '../services/api';
 
+// Cria o contexto
 const AuthContext = createContext(null);
 
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('token'));
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    // Este efeito é ótimo para o carregamento inicial da página e para manter o estado sincronizado
+// Função auxiliar para configurar o header do Axios
+const setAuthToken = token => {
     if (token) {
-      localStorage.setItem('token', token);
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      try {
-        const decodedUser = jwtDecode(token);
-        setUser(decodedUser);
-      } catch (error) {
-        console.error("Token inválido:", error);
-        // Se o token for inválido (expirado, etc.), limpamos tudo
-        setToken(null); 
-      }
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     } else {
-      localStorage.removeItem('token');
-      delete api.defaults.headers.common['Authorization'];
-      setUser(null);
+        delete api.defaults.headers.common['Authorization'];
     }
-  }, [token]);
+};
 
-  async function login(credentials) {
-    try {
-      const response = await api.post('/auth/login', credentials);
-      const newToken = response.data.token;
+// Componente Provedor
+export function AuthProvider({ children }) {
+    const [user, setUser] = useState(null);
+    const [token, setToken] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const navigate = useNavigate();
 
-      // --- A CORREÇÃO ESTÁ AQUI ---
-      // 1. Guardamos o token no localStorage imediatamente.
-      localStorage.setItem('token', newToken);
-      // 2. Colocamos o "crachá" (header) no nosso cliente de API imediatamente.
-      api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
-      // 3. Agora, atualizamos o estado do React.
-      setToken(newToken);
-      
-      navigate('/');
-    } catch (error) {
-      console.error("Erro no login:", error);
-      alert('Falha no login. Verifique suas credenciais.');
-    }
-  }
+    useEffect(() => {
+        const storedToken = localStorage.getItem('token');
+        if (storedToken) {
+            try {
+                const decodedUser = jwtDecode(storedToken);
+                if (decodedUser.exp * 1000 > Date.now()) {
+                    setToken(storedToken);
+                    setUser(decodedUser);
+                    setAuthToken(storedToken);
+                } else {
+                    localStorage.removeItem('token');
+                }
+            } catch (error) {
+                console.error("Token inválido no localStorage", error);
+                localStorage.removeItem('token');
+            }
+        }
+        setLoading(false);
+    }, []);
 
-  async function register(data) {
-    try {
-      await api.post('/auth/register', data);
-      alert('Registo realizado com sucesso! Por favor, faça o login.');
-      navigate('/login');
-    } catch (error) {
-      console.error("Erro no registo:", error);
-      alert('Falha no registo. Verifique os dados e tente novamente.');
-    }
-  }
+    const login = async (credentials) => {
+        try {
+            const response = await api.post('/auth/login', credentials);
+            const newToken = response.data.token;
+            
+            localStorage.setItem('token', newToken);
+            setAuthToken(newToken);
+            
+            const decodedUser = jwtDecode(newToken);
+            setUser(decodedUser);
+            setToken(newToken);
+            
+            navigate('/');
+        } catch (error) {
+            console.error("Erro no login:", error);
+            alert('Falha no login. Verifique suas credenciais.');
+        }
+    };
 
-  function logout() {
-    setToken(null);
-    navigate('/login');
-  }
+    const register = async (data) => {
+        try {
+            await api.post('/auth/register', data);
+            alert('Registo realizado com sucesso! Por favor, faça o login.');
+            navigate('/login');
+        } catch (error) {
+            console.error("Erro no registo:", error);
+            alert('Falha no registo. Verifique os dados e tente novamente.');
+        }
+    };
 
-  const value = { token, user, login, logout, register };
+    const logout = () => {
+        localStorage.removeItem('token');
+        setAuthToken(null);
+        setUser(null);
+        setToken(null);
+        navigate('/login');
+    };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+    const can = (permission) => {
+        return user?.permissoes.includes(permission) ?? false;
+    };
+
+    const value = { user, token, loading, login, logout, register, can };
+
+    return (
+        <AuthContext.Provider value={value}>
+            {!loading && children}
+        </AuthContext.Provider>
+    );
 }
 
-export function useAuth() {
-  return useContext(AuthContext);
-}
+// Hook personalizado para usar o contexto
+export const useAuth = () => {
+    return useContext(AuthContext);
+};

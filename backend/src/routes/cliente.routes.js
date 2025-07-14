@@ -3,6 +3,8 @@
 const { Router } = require('express');
 const ClienteController = require('../controllers/ClienteController');
 const authMiddleware = require('../middleware/authMiddleware');
+const checkPermission = require('../middleware/permissionMiddleware'); // 1. Importa
+
 
 const clienteRouter = Router();
 
@@ -12,19 +14,19 @@ clienteRouter.use(authMiddleware);
 // --- ROTAS DO CRUD ---
 
 // Rota para buscar um cliente específico (mais específica, vem primeiro)
-clienteRouter.get('/:id', ClienteController.getById);
+clienteRouter.get('/:id', checkPermission('clientes:ler'), ClienteController.getById);
 
 // Rota para listar todos os clientes (mais genérica, vem depois)
-clienteRouter.get('/', ClienteController.listByPiscicultura);
+clienteRouter.get('/', checkPermission('clientes:ler'), ClienteController.listByPiscicultura);
 
 // Rota para criar um novo cliente
-clienteRouter.post('/', ClienteController.create);
+clienteRouter.post('/', checkPermission('clientes:criar'), ClienteController.create);
 
 // Rota para atualizar um cliente
-clienteRouter.put('/:id', ClienteController.update);
+clienteRouter.put('/:id', checkPermission('clientes:editar'), ClienteController.update);
 
 // Rota para deletar um cliente
-clienteRouter.delete('/:id', ClienteController.delete);
+clienteRouter.delete('/:id', checkPermission('clientes:apagar'), ClienteController.delete);
 
 
 module.exports = clienteRouter;

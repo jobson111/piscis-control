@@ -5,6 +5,8 @@ import { Box, Typography, Button, CircularProgress, Modal } from '@mui/material'
 import api from '../services/api';
 import ClienteList from '../components/ClienteList';
 import ClienteForm from '../components/ClienteForm';
+import ProtectedComponent from '../components/ProtectedComponent'; // 1. Importamos nosso verificador
+
 
 const style = {
     position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
@@ -69,7 +71,10 @@ function ClientesPage() {
         <Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h5">Gestão de Clientes</Typography>
-                <Button variant="contained" onClick={() => handleOpenModal()}>Adicionar Cliente</Button>
+                <ProtectedComponent requiredPermission="clientes:criar">
+                    <Button variant="contained" onClick={() => handleOpenModal()}>Adicionar Cliente</Button>
+                </ProtectedComponent>
+
             </Box>
             
             <ClienteList clientes={clientes} onEdit={handleOpenModal} onDelete={handleDelete} />

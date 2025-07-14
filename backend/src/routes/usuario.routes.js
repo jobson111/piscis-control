@@ -2,11 +2,13 @@
 const { Router } = require('express');
 const UsuarioController = require('../controllers/UsuarioController');
 const authMiddleware = require('../middleware/authMiddleware');
+const checkPermission = require('../middleware/permissionMiddleware'); // 1. Importa
+
 
 const usuarioRouter = Router();
 usuarioRouter.use(authMiddleware);
 
-usuarioRouter.get('/', UsuarioController.list);
-usuarioRouter.post('/', UsuarioController.create);
+usuarioRouter.get('/', checkPermission('vendas:ler'), UsuarioController.list);
+usuarioRouter.post('/', checkPermission('vendas:criar'), UsuarioController.create);
 
 module.exports = usuarioRouter;

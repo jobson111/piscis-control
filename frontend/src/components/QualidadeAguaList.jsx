@@ -3,6 +3,7 @@
 import { List, ListItem, ListItemText, Typography, Paper, IconButton, Box } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import ProtectedComponent from './ProtectedComponent'; // <-- proteçao
 
 // O componente agora recebe onEdit e onDelete
 function QualidadeAguaList({ registros, onEdit, onDelete }) {
@@ -17,12 +18,16 @@ function QualidadeAguaList({ registros, onEdit, onDelete }) {
               divider
               secondaryAction={
                 <Box>
-                  <IconButton edge="end" aria-label="edit" onClick={() => onEdit(reg)}>
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton edge="end" aria-label="delete" onClick={() => onDelete(reg.id)}>
-                    <DeleteIcon />
-                  </IconButton>
+                   <ProtectedComponent requiredPermission="qualidade_agua:editar">
+                      <IconButton edge="end" aria-label="edit" onClick={() => onEdit(reg)}>
+                        <EditIcon />
+                      </IconButton>
+                    </ProtectedComponent>
+                  <ProtectedComponent requiredPermission="qualidade_agua:apagar">
+                    <IconButton edge="end" aria-label="delete" onClick={() => onDelete(reg.id)}>
+                      <DeleteIcon />
+                    </IconButton>
+                  </ProtectedComponent>  
                 </Box>
               }
             >

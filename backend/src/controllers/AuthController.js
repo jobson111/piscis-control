@@ -46,38 +46,39 @@ exports.register = async (req, res) => {
 // --- LOGIN DE UM USUÁRIO EXISTENTE ---
 exports.login = async (req, res) => {
     const { email, senha } = req.body;
-
     try {
-        // 1. Encontra o usuário pelo email
         const userResult = await db.query('SELECT * FROM usuarios WHERE email = $1', [email]);
-        if (userResult.rowCount === 0) {
-            return res.status(401).json({ error: 'Credenciais inválidas' }); // Usuário não encontrado
-        }
-        const usuario = userResult.rows[0];
+        if (userResult.rowCount === 0) return res.status(400).json({ msg: 'Credenciais inválidas.' });
 
-        // 2. Compara a senha enviada com a senha criptografada no banco
-        const senhaCorreta = await bcrypt.compare(senha, usuario.senha_hash);
-        if (!senhaCorreta) {
-            return res.status(401).json({ error: 'Credenciais inválidas' }); // Senha incorreta
-        }
+        const user = userResult.rows[0];
+        const isMatch = await bcrypt.compare(senha, user.senha_hash);
+        if (!isMatch) return res.status(400).json({ msg: 'Credenciais inválidas.' });
 
-        // 3. Se a senha estiver correta, cria o token de acesso (JWT)
-        const token = jwt.sign(
-            { 
-                userId: usuario.id, 
-                pisciculturaId: usuario.piscicultura_id 
-            },
-            process.env.JWT_SECRET, // Chave secreta. Em produção, isso deve vir de uma variável de ambiente!
-            { expiresIn: '8h' } // Token expira em 8 horas
-        );
+        // --- NOVA LÓGICA ---
+        // Busca as permissões do usuário
+        const permissoesResult = await db.query(`
+            SELECT DISTINCT p.acao FROM usuarios u
+            JOIN usuario_cargos uc ON u.id = uc.usuario_id
+            JOIN cargo_permissoes cp ON uc.cargo_id = cp.cargo_id
+            JOIN permissoes p ON cp.permissao_id = p.id
+            WHERE u.id = $1;
+        `, [user.id]);
+        const permissoes = permissoesResult.rows.map(p => p.acao);
 
-        res.status(200).json({
-            message: 'Login bem-sucedido!',
-            token: token
+        // Cria o payload com os dados do usuário E suas permissões
+        const payload = {
+            userId: user.id,
+            nome: user.nome,
+            pisciculturaId: user.piscicultura_id,
+            permissoes: permissoes // Inclui o array de permissões
+        };
+        // --- FIM DA NOVA LÓGICA ---
+
+        jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '5h' }, (err, token) => {
+            if (err) throw err;
+            res.json({ token });
         });
-
     } catch (error) {
-        console.error('Erro no login:', error);
-        res.status(500).json({ error: 'Erro interno do servidor.' });
+        res.status(500).send('Erro no servidor');
     }
 };

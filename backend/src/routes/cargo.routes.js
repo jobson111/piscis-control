@@ -3,6 +3,8 @@
 const { Router } = require('express');
 const CargoController = require('../controllers/CargoController');
 const authMiddleware = require('../middleware/authMiddleware');
+const checkPermission = require('../middleware/permissionMiddleware'); // 1. Importa
+
 
 const cargoRouter = Router();
 cargoRouter.use(authMiddleware);
@@ -11,10 +13,11 @@ cargoRouter.use(authMiddleware);
 cargoRouter.get('/permissoes', CargoController.listAllPermissoes);
 
 // Rotas CRUD para os Cargos
-cargoRouter.post('/', CargoController.create);
-cargoRouter.get('/', CargoController.list);
-cargoRouter.get('/:id', CargoController.getById);
-cargoRouter.put('/:id', CargoController.update);
+cargoRouter.post('/', checkPermission('cargos:gerir'), CargoController.create);
+cargoRouter.get('/:id', checkPermission('cargos:gerir'), CargoController.getById);
+cargoRouter.put('/:id', checkPermission('cargos:gerir'), CargoController.update);
+cargoRouter.get('/', checkPermission('cargos:gerir'), CargoController.list);
+
 // A rota de delete pode ser adicionada aqui no futuro se necessário
 
 module.exports = cargoRouter;

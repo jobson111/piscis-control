@@ -1,7 +1,9 @@
-// src/components/ClienteList.jsx
+// src/components/ClienteList.jsx (VERSÃO SEGURA)
+
 import { List, ListItem, ListItemText, Typography, Paper, IconButton, Box } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import ProtectedComponent from './ProtectedComponent'; // 1. Importamos nosso verificador
 
 function ClienteList({ clientes, onEdit, onDelete }) {
   return (
@@ -14,12 +16,19 @@ function ClienteList({ clientes, onEdit, onDelete }) {
               divider
               secondaryAction={
                 <Box>
-                  <IconButton edge="end" aria-label="edit" onClick={() => onEdit(cliente)}>
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton edge="end" aria-label="delete" onClick={() => onDelete(cliente.id)}>
-                    <DeleteIcon />
-                  </IconButton>
+                  {/* 2. O botão de Editar só é renderizado se o usuário tiver a permissão */}
+                  <ProtectedComponent requiredPermission="clientes:editar">
+                    <IconButton edge="end" aria-label="edit" onClick={() => onEdit(cliente)}>
+                      <EditIcon />
+                    </IconButton>
+                  </ProtectedComponent>
+
+                  {/* 3. O botão de Apagar só é renderizado se o usuário tiver a permissão */}
+                  <ProtectedComponent requiredPermission="clientes:apagar">
+                    <IconButton edge="end" aria-label="delete" onClick={() => onDelete(cliente.id)}>
+                      <DeleteIcon />
+                    </IconButton>
+                  </ProtectedComponent>
                 </Box>
               }
             >

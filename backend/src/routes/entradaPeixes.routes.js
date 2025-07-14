@@ -2,6 +2,8 @@
 const { Router } = require('express');
 const EntradaPeixesController = require('../controllers/EntradaPeixesController');
 const authMiddleware = require('../middleware/authMiddleware');
+const checkPermission = require('../middleware/permissionMiddleware'); // 1. Importa
+
 
 const entradaPeixesRouter = Router();
 
@@ -9,10 +11,10 @@ const entradaPeixesRouter = Router();
 entradaPeixesRouter.use(authMiddleware);
 
 // Rota para listar todas as entradas
-entradaPeixesRouter.get('/', EntradaPeixesController.list);
+entradaPeixesRouter.get('/', checkPermission('entradas:ler'), EntradaPeixesController.list);
 
 // Rota para criar uma nova entrada (com seus lotes)
-entradaPeixesRouter.post('/', EntradaPeixesController.create);
+entradaPeixesRouter.post('/', checkPermission('entradas:criar'), EntradaPeixesController.create);
 
 // Futuramente, podemos adicionar rotas para deletar ou editar uma entrada
 // entradaPeixesRouter.delete('/:id', EntradaPeixesController.delete);
