@@ -17,6 +17,16 @@ import FormasPagamentoPage from './pages/FormasPagamentoPage'; // Importa pagina
 import VendasPage from './pages/VendasPage'; // Importe a nova página de vendas
 import CargosPage from './pages/CargosPage'; // Importe a nova página de Cargos
 import UsuariosPage from './pages/UsuariosPage'; // Importe a nova pagina usuarios
+import ContasFinanceirasPage from './pages/ContasFinanceirasPage'; // Importe pagina de contas financeiras
+import CategoriasDespesaPage from './pages/CategoriasDespesaPage'; // importe para categorias de despesas
+import FluxoDeCaixaPage from './pages/FluxoDeCaixaPage'; // Importe a nova página
+import PrestacaoContasPage from './pages/PrestacaoContasPage'; //import prestaçao de contas
+import RelatorioEstoquePage from './pages/RelatorioEstoquePage'; // Importe a nova página relatorio estoque
+import RelatorioVendasPage from './pages/RelatorioVendasPage'; // Importe a nova página relatorio vendas
+
+
+
+
 
 
 
@@ -47,6 +57,15 @@ function App() {
         <Route path="/vendas" element={<MainLayout><VendasPage /></MainLayout>} />
         <Route path="/cargos" element={<MainLayout><CargosPage /></MainLayout>} />
         <Route path="/usuarios" element={<MainLayout><UsuariosPage /></MainLayout>} />
+        <Route path="/contas-financeiras" element={<MainLayout><ContasFinanceirasPage /></MainLayout>} />
+        <Route path="/categorias-despesa" element={<MainLayout><CategoriasDespesaPage /></MainLayout>} />
+        <Route path="/financeiro/fluxo-caixa" element={<MainLayout><FluxoDeCaixaPage /></MainLayout>} />
+        <Route path="/financeiro/prestacao-contas" element={<MainLayout><PrestacaoContasPage /></MainLayout>} />
+        <Route path="/relatorios/estoque" element={<MainLayout><RelatorioEstoquePage /></MainLayout>} />
+        <Route path="/relatorios/vendas" element={<MainLayout><RelatorioVendasPage /></MainLayout>} />
+
+
+
 
 
 

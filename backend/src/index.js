@@ -19,6 +19,14 @@ const formaPagamentoRouter = require('./routes/formaPagamento.routes');
 const vendaRouter = require('./routes/venda.routes');
 const cargoRouter = require('./routes/cargo.routes');
 const usuarioRouter = require('./routes/usuario.routes');
+const contaFinanceiraRouter = require('./routes/contaFinanceira.routes');
+const categoriaDespesaRouter = require('./routes/categoriaDespesa.routes');
+const movimentacaoRouter = require('./routes/movimentacaoFinanceira.routes');
+const financeiroRouter = require('./routes/financeiro.routes');
+const relatorioRouter = require('./routes/relatorio.routes');
+
+
+
 
 
 
@@ -58,6 +66,13 @@ app.use('/formas-pagamento', formaPagamentoRouter);
 app.use('/vendas', vendaRouter);
 app.use('/cargos', cargoRouter);
 app.use('/usuarios', usuarioRouter);
+app.use('/contas-financeiras', contaFinanceiraRouter);
+app.use('/categorias-despesa', categoriaDespesaRouter);
+app.use('/movimentacoes', movimentacaoRouter);
+app.use('/financeiro', financeiroRouter);
+app.use('/relatorios', relatorioRouter);
+
+
 
 
 

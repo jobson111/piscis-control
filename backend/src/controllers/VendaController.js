@@ -76,12 +76,33 @@ exports.create = async (req, res) => {
 // A função 'list' permanece a mesma
 exports.list = async (req, res) => {
     const { pisciculturaId } = req.user;
+    // Novos filtros que podemos receber da URL
+    const { cliente_id, vendedor_id, data_inicio, data_fim, status_pagamento } = req.query;
+
     try {
-        const sql = `SELECT v.*, c.nome as nome_cliente, u.nome as nome_vendedor FROM vendas v
-                     LEFT JOIN clientes c ON v.cliente_id = c.id
-                     LEFT JOIN usuarios u ON v.vendedor_id = u.id
-                     WHERE v.piscicultura_id = $1 ORDER BY v.data_venda DESC, v.id DESC;`;
-        const result = await db.query(sql, [pisciculturaId]);
+        let sql = `
+            SELECT 
+                v.id, v.nr_venda, v.nr_nota_fiscal, v.data_venda, v.valor_final, 
+                v.status_pagamento, v.status_entrega,
+                c.nome as nome_cliente, u.nome as nome_vendedor
+            FROM vendas v
+            LEFT JOIN clientes c ON v.cliente_id = c.id
+            LEFT JOIN usuarios u ON v.vendedor_id = u.id
+            WHERE v.piscicultura_id = $1
+        `;
+        
+        const values = [pisciculturaId];
+        let paramIndex = 2;
+
+        if (cliente_id) { sql += ` AND v.cliente_id = $${paramIndex++}`; values.push(cliente_id); }
+        if (vendedor_id) { sql += ` AND v.vendedor_id = $${paramIndex++}`; values.push(vendedor_id); }
+        if (data_inicio) { sql += ` AND v.data_venda >= $${paramIndex++}`; values.push(data_inicio); }
+        if (data_fim) { sql += ` AND v.data_venda <= $${paramIndex++}`; values.push(data_fim); }
+        if (status_pagamento) { sql += ` AND v.status_pagamento = $${paramIndex++}`; values.push(status_pagamento); }
+
+        sql += ` ORDER BY v.data_venda DESC, v.id DESC;`;
+
+        const result = await db.query(sql, values);
         res.status(200).json(result.rows);
     } catch (error) {
         console.error('Erro ao listar vendas:', error);

@@ -13,6 +13,17 @@ import PointOfSaleIcon from '@mui/icons-material/PointOfSale'; // Ícone para Ve
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings'; // Ícone para Cargos
 import GroupIcon from '@mui/icons-material/Group'; //icone para utilizadores- usuarios
 import ProtectedComponent from './ProtectedComponent';
+import AttachMoneyIcon from '@mui/icons-material/AttachMoney'; // Ícone para Financeiro
+import CategoryIcon from '@mui/icons-material/Category'; // icone de categoria
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong'; // Ícone para Fluxo de Caixa
+import SummarizeIcon from '@mui/icons-material/Summarize';
+import AssessmentIcon from '@mui/icons-material/Assessment'; // Ícone para Relatórios
+import MonetizationOnIcon from '@mui/icons-material/MonetizationOn'; // Ícone para Relatório de Vendas
+
+
+
+
+
 
 
 const drawerWidth = 240;
@@ -79,6 +90,55 @@ function MainLayout({ children }) {
                         <ListItemText primary="Utilizadores" />
                     </ListItemButton>
                 </ListItem>
+                {/* --- NOVO ITEM DE MENU Contas Financeira --- */}
+                <ListItem disablePadding component={NavLink} to="/contas-financeiras" style={{color: 'inherit'}}>
+                    <ListItemButton>
+                        <ListItemIcon><AttachMoneyIcon /></ListItemIcon>
+                        <ListItemText primary="Contas" />
+                    </ListItemButton>
+                </ListItem>
+                {/* --- NOVO ITEM DE MENU Prestação de contas --- */}
+                <ListItem disablePadding component={NavLink} to="/financeiro/prestacao-contas" style={{color: 'inherit'}}>
+                    <ListItemButton>
+                        <ListItemIcon><SummarizeIcon /></ListItemIcon>
+                        <ListItemText primary="Prestação de Contas" />
+                    </ListItemButton>
+                </ListItem>
+                {/* --- NOVO ITEM DE MENU Categorias despesas --- */}
+                <ListItem disablePadding component={NavLink} to="/categorias-despesa" style={{color: 'inherit'}}>
+                    <ListItemButton>
+                        <ListItemIcon><CategoryIcon /></ListItemIcon>
+                        <ListItemText primary="Categorias de Despesa" />
+                    </ListItemButton>
+                </ListItem>
+                {/* --- NOVO ITEM DE MENU fluxo de caixa --- */}
+                <ListItem disablePadding component={NavLink} to="/financeiro/fluxo-caixa" style={{color: 'inherit'}}>
+                    <ListItemButton>
+                        <ListItemIcon><ReceiptLongIcon /></ListItemIcon>
+                        <ListItemText primary="Fluxo de Caixa" />
+                    </ListItemButton>
+                </ListItem>
+                {/* --- NOVO DIVISAO ITEM DE MENU relatorios --- */}
+                <Divider />
+                <List>
+                    <ListItem>
+                        <Typography variant="overline">Relatórios</Typography>
+                    </ListItem>
+                   {/* --- NOVO ITEM DE MENU relatorio estiqye atual --- */}
+                    <ListItem disablePadding component={NavLink} to="/relatorios/estoque" style={{color: 'inherit'}}>
+                        <ListItemButton>
+                            <ListItemIcon><AssessmentIcon /></ListItemIcon>
+                            <ListItemText primary="Estoque Atual" />
+                        </ListItemButton>
+                    </ListItem>
+                    {/* --- NOVO ITEM DE MENU relatorio VENDAS --- */}
+                    <ListItem disablePadding component={NavLink} to="/relatorios/vendas" style={{color: 'inherit'}}>
+                        <ListItemButton>
+                            <ListItemIcon><MonetizationOnIcon /></ListItemIcon>
+                            <ListItemText primary="Relatório de Vendas" />
+                        </ListItemButton>
+                    </ListItem>
+                </List>
                 {/* --- NOVO ITEM DE MENU Cargos e Permissoes --- */}
                 <ProtectedComponent requiredPermission="cargos:gerir">
                     <ListItem disablePadding component={NavLink} to="/cargos" style={{color: 'inherit'}}>
