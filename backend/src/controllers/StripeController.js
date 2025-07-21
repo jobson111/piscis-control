@@ -76,7 +76,7 @@ exports.createPortalSession = async (req, res) => {
     }
 };
 
-// --- A FUNÇÃO DE WEBHOOK FINAL, ROBUSTA E COMPLETA ---
+// --- A FUNÇÃO DE WEBHOOK FINAL ---
 // --- A FUNÇÃO DE WEBHOOK FINAL ---
 exports.handleWebhook = async (req, res) => {
     const sig = req.headers['stripe-signature'];
