@@ -82,6 +82,7 @@ exports.login = async (req, res) => {
         const payload = {
             userId: user.id,
             nome: user.nome,
+            email: user.email, // A linha que faltava
             pisciculturaId: user.piscicultura_id,
             permissoes: permissoes // Inclui o array de permissões
         };
