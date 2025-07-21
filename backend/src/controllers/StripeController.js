@@ -5,7 +5,7 @@ const db = require('../config/db');
 
 // Esta função está correta, a incluímos para garantir que o ficheiro está completo.
 exports.createCheckoutSession = async (req, res) => {
-    const { pisciculturaId, email } = req.user;
+    const { pisciculturaId, email } = req.user; // O email agora vem do token
     const { priceId } = req.body;
     if (!priceId) return res.status(400).json({ error: 'O ID do preço é obrigatório.' });
 
@@ -15,13 +15,20 @@ exports.createCheckoutSession = async (req, res) => {
         const pisciculturaResult = await client.query('SELECT * FROM pisciculturas WHERE id = $1', [pisciculturaId]);
         if (pisciculturaResult.rowCount === 0) throw new Error('Piscicultura não encontrada.');
         
-        const piscicultura = pisciculturaResult.rows;
+        const piscicultura = pisciculturaResult.rows[0];
         let stripeCustomerId = piscicultura.stripe_customer_id;
 
         if (!stripeCustomerId) {
-            const customer = await stripe.customers.create({ name: piscicultura.nome_fantasia, email: email, metadata: { piscicultura_id: piscicultura.id } });
+            console.log(`--- Criando novo cliente na Stripe para a piscicultura ID: ${pisciculturaId}`);
+            // Garante que o email é passado para a Stripe
+            const customer = await stripe.customers.create({ 
+                name: piscicultura.nome_fantasia, 
+                email: email, // Usa o email do token
+                metadata: { piscicultura_id: piscicultura.id } 
+            });
             stripeCustomerId = customer.id;
             await client.query('UPDATE pisciculturas SET stripe_customer_id = $1 WHERE id = $2', [stripeCustomerId, pisciculturaId]);
+            console.log(`--- Cliente Stripe ID [${stripeCustomerId}] salvo com sucesso.`);
         }
 
         const session = await stripe.checkout.sessions.create({
@@ -31,19 +38,13 @@ exports.createCheckoutSession = async (req, res) => {
             mode: 'subscription',
             success_url: `${process.env.FRONTEND_URL}/assinatura/sucesso`,
             cancel_url: `${process.env.FRONTEND_URL}/planos`,
-            // SUGESTÃO: Adicionar metadados à assinatura que será criada para facilitar a reconciliação.
-            subscription_data: {
-                metadata: {
-                    pisciculturaId: pisciculturaId
-                }
-            }
         });
         
         await client.query('COMMIT');
         res.status(200).json({ sessionId: session.id });
     } catch (error) {
         await client.query('ROLLBACK');
-        console.error('Erro em createCheckoutSession:', error.message);
+        console.error('Erro em createCheckoutSession:', error);
         res.status(500).json({ error: 'Erro ao comunicar com o sistema de pagamento.' });
     } finally {
         client.release();
