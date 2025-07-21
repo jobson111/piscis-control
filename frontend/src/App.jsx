@@ -23,6 +23,12 @@ import FluxoDeCaixaPage from './pages/FluxoDeCaixaPage'; // Importe a nova pági
 import PrestacaoContasPage from './pages/PrestacaoContasPage'; //import prestaçao de contas
 import RelatorioEstoquePage from './pages/RelatorioEstoquePage'; // Importe a nova página relatorio estoque
 import RelatorioVendasPage from './pages/RelatorioVendasPage'; // Importe a nova página relatorio vendas
+import RelatorioDesempenhoLotePage from './pages/RelatorioDesempenhoLotePage'; // Importe lotes
+import PlanosPage from './pages/PlanosPage'; //import planos
+import AssinaturaSucessoPage from './pages/AssinaturaSucessoPage'; //importa assinaturas de planos
+
+
+
 
 
 
@@ -63,6 +69,14 @@ function App() {
         <Route path="/financeiro/prestacao-contas" element={<MainLayout><PrestacaoContasPage /></MainLayout>} />
         <Route path="/relatorios/estoque" element={<MainLayout><RelatorioEstoquePage /></MainLayout>} />
         <Route path="/relatorios/vendas" element={<MainLayout><RelatorioVendasPage /></MainLayout>} />
+        <Route path="/relatorios/desempenho-lote/:loteId" element={<MainLayout><RelatorioDesempenhoLotePage /></MainLayout>} />
+        <Route path="/planos" element={<MainLayout><PlanosPage /></MainLayout>} />
+        <Route path="/assinatura/sucesso" element={<MainLayout><AssinaturaSucessoPage /></MainLayout>} />
+
+
+
+
+
 
 
 

@@ -19,6 +19,8 @@ import ReceiptLongIcon from '@mui/icons-material/ReceiptLong'; // Ícone para Fl
 import SummarizeIcon from '@mui/icons-material/Summarize';
 import AssessmentIcon from '@mui/icons-material/Assessment'; // Ícone para Relatórios
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn'; // Ícone para Relatório de Vendas
+import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium'; //configuraçoes
+
 
 
 
@@ -136,6 +138,13 @@ function MainLayout({ children }) {
                         <ListItemButton>
                             <ListItemIcon><MonetizationOnIcon /></ListItemIcon>
                             <ListItemText primary="Relatório de Vendas" />
+                        </ListItemButton>
+                    </ListItem>
+                    {/* --- NOVO ITEM DE MENU PLANOS --- */}
+                    <ListItem disablePadding component={NavLink} to="/planos" style={{color: 'inherit'}}>
+                        <ListItemButton>
+                            <ListItemIcon><WorkspacePremiumIcon /></ListItemIcon>
+                            <ListItemText primary="Planos e Assinatura" />
                         </ListItemButton>
                     </ListItem>
                 </List>

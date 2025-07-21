@@ -5,40 +5,67 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 // --- REGISTRO DE UM NOVO USUÁRIO E SUA PISCICULTURA ---
+// SUBSTITUA a função 'register' por esta
+
+// Em backend/src/controllers/AuthController.js
+// SUBSTITUA a função 'register' por esta
 exports.register = async (req, res) => {
     const { nomePiscicultura, cnpj, nomeUsuario, email, senha } = req.body;
-
-    const client = await db.pool.connect(); // Pega um cliente do pool para a transação
-
+    const client = await db.pool.connect();
     try {
-        await client.query('BEGIN'); // Inicia a transação
+        await client.query('BEGIN');
 
-        // 1. Criptografa a senha
-        const salt = await bcrypt.genSalt(10);
-        const senhaHash = await bcrypt.hash(senha, salt);
-
-        // 2. Cria a nova piscicultura
+        // 1. Cria a nova piscicultura
         const pisciculturaSql = 'INSERT INTO pisciculturas (nome_fantasia, cnpj) VALUES ($1, $2) RETURNING id';
         const pisciculturaResult = await client.query(pisciculturaSql, [nomePiscicultura, cnpj]);
         const novaPisciculturaId = pisciculturaResult.rows[0].id;
 
-        // 3. Cria o novo usuário e o associa à piscicultura recém-criada
-        const usuarioSql = 'INSERT INTO usuarios (piscicultura_id, nome, email, senha_hash) VALUES ($1, $2, $3, $4) RETURNING id, nome, email';
+        // 2. Cria o novo usuário Dono
+        const salt = await bcrypt.genSalt(10);
+        const senhaHash = await bcrypt.hash(senha, salt);
+        const usuarioSql = 'INSERT INTO usuarios (piscicultura_id, nome, email, senha_hash) VALUES ($1, $2, $3, $4) RETURNING id';
         const usuarioResult = await client.query(usuarioSql, [novaPisciculturaId, nomeUsuario, email, senhaHash]);
+        const novoUsuarioId = usuarioResult.rows[0].id;
 
-        await client.query('COMMIT'); // Se tudo deu certo, confirma as operações
+        // 3. Lógica do Trial e Permissões do Dono
+        // Busca o plano "Profissional" pelo nome para o trial
+        const planoResult = await client.query("SELECT id FROM planos WHERE nome = 'Profissional'");
+        if (planoResult.rowCount === 0) throw new Error('Plano Profissional padrão não foi encontrado para o trial.');
+        const planoTrialId = planoResult.rows[0].id;
 
-        res.status(201).json({
-            message: "Piscicultura e usuário registrados com sucesso!",
-            usuario: usuarioResult.rows[0]
-        });
+        // Atribui o trial à piscicultura
+        await client.query(
+            `UPDATE pisciculturas SET plano_id = $1, status_assinatura = 'TRIAL', data_expiracao_assinatura = NOW() + interval '30 days' WHERE id = $2;`,
+            [planoTrialId, novaPisciculturaId]
+        );
 
+        // Cria o cargo "Administrador" para esta nova piscicultura
+        const cargoResult = await client.query(
+            "INSERT INTO cargos (piscicultura_id, nome, descricao) VALUES ($1, 'Administrador', 'Acesso total ao sistema.') RETURNING id",
+            [novaPisciculturaId]
+        );
+        const adminCargoId = cargoResult.rows[0].id;
+
+        // Atribui TODAS as permissões existentes a este novo cargo
+        await client.query(
+            "INSERT INTO cargo_permissoes (cargo_id, permissao_id) SELECT $1, id FROM permissoes",
+            [adminCargoId]
+        );
+        
+        // Finalmente, atribui o cargo de "Administrador" ao novo usuário
+        await client.query(
+            "INSERT INTO usuario_cargos (usuario_id, cargo_id) VALUES ($1, $2)",
+            [novoUsuarioId, adminCargoId]
+        );
+
+        await client.query('COMMIT');
+        res.status(201).json({ success: true, message: "Piscicultura e usuário registados com sucesso no período de teste!" });
     } catch (error) {
-        await client.query('ROLLBACK'); // Se algo deu errado, desfaz tudo
-        console.error('Erro no registro:', error);
+        await client.query('ROLLBACK');
+        console.error('Erro no registro:', error.message);
         res.status(500).json({ error: 'Erro interno do servidor ao tentar registrar.' });
     } finally {
-        client.release(); // Libera o cliente de volta para o pool
+        client.release();
     }
 };
 

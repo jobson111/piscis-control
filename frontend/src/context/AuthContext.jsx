@@ -1,14 +1,10 @@
-// frontend/src/context/AuthContext.jsx (VERSÃO COM EXPORTS CORRIGIDOS)
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 import api from '../services/api';
 
-// Cria o contexto
 const AuthContext = createContext(null);
 
-// Função auxiliar para configurar o header do Axios
 const setAuthToken = token => {
     if (token) {
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
@@ -17,45 +13,52 @@ const setAuthToken = token => {
     }
 };
 
-// Componente Provedor
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [token, setToken] = useState(null);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
-    useEffect(() => {
-        const storedToken = localStorage.getItem('token');
-        if (storedToken) {
+    const reauthenticate = async () => {
+        const currentToken = localStorage.getItem('token');
+        if (currentToken) {
             try {
-                const decodedUser = jwtDecode(storedToken);
-                if (decodedUser.exp * 1000 > Date.now()) {
-                    setToken(storedToken);
-                    setUser(decodedUser);
-                    setAuthToken(storedToken);
+                setAuthToken(currentToken);
+                const decoded = jwtDecode(currentToken);
+                if (decoded.exp * 1000 > Date.now()) {
+                    const pisciculturaRes = await api.get(`/pisciculturas/${decoded.pisciculturaId}`);
+                    setUser({ 
+                        userId: decoded.userId, 
+                        nome: decoded.nome, 
+                        pisciculturaId: decoded.pisciculturaId,
+                        permissoes: decoded.permissoes || [],
+                        piscicultura: pisciculturaRes.data
+                    });
+                    setToken(currentToken);
                 } else {
-                    localStorage.removeItem('token');
+                    logout(); // Token expirado
                 }
             } catch (error) {
-                console.error("Token inválido no localStorage", error);
-                localStorage.removeItem('token');
+                console.error("Falha ao re-autenticar com token do localStorage", error);
+                logout();
             }
         }
-        setLoading(false);
+    };
+
+    useEffect(() => {
+        const loadUserFromToken = async () => {
+            await reauthenticate();
+            setLoading(false);
+        };
+        loadUserFromToken();
     }, []);
 
     const login = async (credentials) => {
         try {
             const response = await api.post('/auth/login', credentials);
             const newToken = response.data.token;
-            
             localStorage.setItem('token', newToken);
-            setAuthToken(newToken);
-            
-            const decodedUser = jwtDecode(newToken);
-            setUser(decodedUser);
-            setToken(newToken);
-            
+            await reauthenticate();
             navigate('/');
         } catch (error) {
             console.error("Erro no login:", error);
@@ -86,7 +89,7 @@ export function AuthProvider({ children }) {
         return user?.permissoes.includes(permission) ?? false;
     };
 
-    const value = { user, token, loading, login, logout, register, can };
+    const value = { user, token, loading, login, logout, register, can, reauthenticate };
 
     return (
         <AuthContext.Provider value={value}>
@@ -95,7 +98,6 @@ export function AuthProvider({ children }) {
     );
 }
 
-// Hook personalizado para usar o contexto
 export const useAuth = () => {
     return useContext(AuthContext);
 };

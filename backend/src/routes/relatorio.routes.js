@@ -9,5 +9,7 @@ relatorioRouter.use(authMiddleware);
 
 // Rota para o nosso novo relatório de estoque
 relatorioRouter.get('/estoque-atual', checkPermission('relatorios:ler'), RelatorioController.getEstoqueAtual);
+relatorioRouter.get('/desempenho-lote/:loteId', checkPermission('relatorios:ler'), RelatorioController.getDesempenhoLote);
+
 
 module.exports = relatorioRouter;

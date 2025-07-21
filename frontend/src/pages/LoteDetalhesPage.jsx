@@ -104,6 +104,24 @@ function LoteDetalhesPage() {
       <Button component={RouterLink} to={`/tanques/${lote.tanque_id}`} variant="outlined" sx={{ mb: 2 }}>
         Voltar para o Tanque
       </Button>
+      
+      <Paper elevation={1} sx={{p: 2, mb: 4}}>
+            <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                <Box>
+                    <Typography variant="h5" gutterBottom>Lote de {lote.especie} (ID: {lote.id})</Typography>
+                    <Typography variant="body1">Status: {lote.status} | Peso Atual: {lote.peso_atual_medio_g || lote.peso_inicial_medio_g}g</Typography>
+                </Box>
+                {/* --- NOVO BOTÃO --- */}
+                <Button 
+                    variant="contained" 
+                    component={RouterLink} 
+                    to={`/relatorios/desempenho-lote/${lote.id}`}
+                >
+                    Ver Relatório de Desempenho
+                </Button>
+            </Box>
+        </Paper>
+
 
       {/* Renderiza o Gráfico */}
       <GraficoCrescimento 

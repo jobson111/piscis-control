@@ -3,6 +3,8 @@
 import { List, ListItem, ListItemText, Typography, Paper, IconButton, Box } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import ProtectedComponent from './ProtectedComponent'; // <-- A LINHA QUE FALTAVA
+
 
 // O componente agora recebe onEdit e onDelete
 function AlimentacaoList({ registros, onEdit, onDelete }) {

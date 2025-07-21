@@ -3,18 +3,20 @@
 const db = require('../config/db');
 
 // --- CRIAR um novo registo de alimentação ---
+
+
 exports.create = async (request, response) => {
-    const { pisciculturaId } = request.user; // ID seguro do token
-    const { lote_id, tipo_racao, quantidade_kg, data_alimentacao } = request.body;
+    const { pisciculturaId } = request.user;
+    // Agora também pegamos o custo_total do corpo da requisição
+    const { lote_id, tipo_racao, quantidade_kg, data_alimentacao, custo_total } = request.body;
 
     try {
         const sql = `
-            INSERT INTO registros_alimentacao (lote_id, piscicultura_id, tipo_racao, quantidade_kg, data_alimentacao)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO registros_alimentacao (lote_id, piscicultura_id, tipo_racao, quantidade_kg, data_alimentacao, custo_total)
+            VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING *
         `;
-        // Usa a data enviada ou a data atual como padrão
-        const values = [lote_id, pisciculturaId, tipo_racao, quantidade_kg, data_alimentacao || new Date()];
+        const values = [lote_id, pisciculturaId, tipo_racao, quantidade_kg, data_alimentacao || new Date(), custo_total];
         
         const result = await db.query(sql, values);
         return response.status(201).json(result.rows[0]);
