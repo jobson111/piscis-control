@@ -5,9 +5,17 @@ const db = require('../config/db');
 
 // Esta função está correta, a incluímos para garantir que o ficheiro está completo.
 exports.createCheckoutSession = async (req, res) => {
-    const { pisciculturaId, email } = req.user; // O email agora vem do token
+    console.log("--- [API] Iniciando createCheckoutSession ---");
+    const { pisciculturaId, email, nome } = req.user;
     const { priceId } = req.body;
+
+    console.log(`> Dados recebidos do token: pisciculturaId=${pisciculturaId}, email=${email}, nome=${nome}`);
+    
     if (!priceId) return res.status(400).json({ error: 'O ID do preço é obrigatório.' });
+    if (!pisciculturaId || !email) {
+        console.error("--- ERRO CRÍTICO: pisciculturaId ou email estão em falta no token JWT.");
+        return res.status(500).json({ error: 'Erro de autenticação: dados do usuário incompletos.' });
+    }
 
     const client = await db.pool.connect();
     try {
@@ -19,16 +27,15 @@ exports.createCheckoutSession = async (req, res) => {
         let stripeCustomerId = piscicultura.stripe_customer_id;
 
         if (!stripeCustomerId) {
-            console.log(`--- Criando novo cliente na Stripe para a piscicultura ID: ${pisciculturaId}`);
-            // Garante que o email é passado para a Stripe
+            console.log(`--- [API] Criando novo cliente na Stripe...`);
             const customer = await stripe.customers.create({ 
                 name: piscicultura.nome_fantasia, 
-                email: email, // Usa o email do token
-                metadata: { piscicultura_id: piscicultura.id } 
+                email: email,
+                metadata: { piscicultura_id: piscicultura.id, nome_responsavel: nome } 
             });
             stripeCustomerId = customer.id;
             await client.query('UPDATE pisciculturas SET stripe_customer_id = $1 WHERE id = $2', [stripeCustomerId, pisciculturaId]);
-            console.log(`--- Cliente Stripe ID [${stripeCustomerId}] salvo com sucesso.`);
+            console.log(`--- [API] Cliente Stripe ID [${stripeCustomerId}] salvo com sucesso.`);
         }
 
         const session = await stripe.checkout.sessions.create({
@@ -41,15 +48,18 @@ exports.createCheckoutSession = async (req, res) => {
         });
         
         await client.query('COMMIT');
+        console.log(`--- [API] Sessão de checkout [${session.id}] criada com sucesso.`);
         res.status(200).json({ sessionId: session.id });
+
     } catch (error) {
         await client.query('ROLLBACK');
-        console.error('Erro em createCheckoutSession:', error);
+        console.error('--- [API] ERRO na transação de checkout:', error.message);
         res.status(500).json({ error: 'Erro ao comunicar com o sistema de pagamento.' });
     } finally {
         client.release();
     }
 };
+
 
 // Esta função também está correta.
 exports.createPortalSession = async (req, res) => {
