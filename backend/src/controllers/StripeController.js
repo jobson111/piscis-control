@@ -77,6 +77,7 @@ exports.createPortalSession = async (req, res) => {
 };
 
 // --- A FUNÇÃO DE WEBHOOK FINAL, ROBUSTA E COMPLETA ---
+// --- A FUNÇÃO DE WEBHOOK FINAL ---
 exports.handleWebhook = async (req, res) => {
     const sig = req.headers['stripe-signature'];
     const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -85,49 +86,71 @@ exports.handleWebhook = async (req, res) => {
     try {
         event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
     } catch (err) {
-        console.error(`❌ Erro na verificação da assinatura: ${err.message}`);
+        console.log(`❌ Erro na verificação da assinatura do Webhook: ${err.message}`);
         return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
-    const client = await db.pool.connect();
-    try {
-        console.log(`✅ Webhook Recebido: ${event.type} (ID: ${event.id})`);
-        await client.query('BEGIN');
+    let subscription;
+    let status;
 
-        const eventoJaProcessado = await client.query('SELECT 1 FROM eventos_stripe_processados WHERE event_id = $1', [event.id]);
-        if (eventoJaProcessado.rowCount > 0) {
-            console.log(`> Evento ${event.id} já processado anteriormente. A ignorar.`);
-            await client.query('COMMIT');
-            return res.status(200).json({ received: true, message: 'Evento já processado.' });
-        }
-
-        if (event.type === 'invoice.payment_succeeded') {
+    // Lida com os diferentes tipos de eventos de assinatura
+    switch (event.type) {
+        case 'customer.subscription.trial_will_end':
+            subscription = event.data.object;
+            status = subscription.status;
+            console.log(`Assinatura trial a terminar para ${subscription.id}. Status: ${status}`);
+            break;
+        case 'customer.subscription.deleted':
+            subscription = event.data.object;
+            status = subscription.status;
+            console.log(`Assinatura cancelada: ${subscription.id}. Status: ${status}`);
+            // Aqui podemos atualizar o status no nosso banco para 'CANCELADO'
+            break;
+        case 'customer.subscription.created':
+            subscription = event.data.object;
+            status = subscription.status;
+            console.log(`Assinatura criada: ${subscription.id}. Status: ${status}`);
+            // A subscrição é criada mas ainda pode não estar paga, então esperamos pelo invoice.payment_succeeded
+            break;
+        case 'customer.subscription.updated':
+            subscription = event.data.object;
+            status = subscription.status;
+            console.log(`Assinatura atualizada: ${subscription.id}. Status: ${status}`);
+            // Este evento é útil para upgrades/downgrades
+            break;
+        case 'invoice.payment_succeeded':
             const invoice = event.data.object;
-            if (invoice.subscription && invoice.status === 'paid') {
+            // Se o motivo do pagamento for a criação de uma subscrição, então atualizamos a nossa base de dados
+            if (invoice.billing_reason === 'subscription_create') {
                 const stripeCustomerId = invoice.customer;
-                const priceId = invoice.lines.data[0].price.id;
-                const dataExpiracao = new Date(invoice.period_end * 1000);
-
-                const precoResult = await client.query("SELECT id, plano_id FROM precos_planos WHERE gateway_price_id = $1", [priceId]);
-                if (precoResult.rowCount > 0) {
+                const subscriptionId = invoice.subscription;
+                
+                try {
+                    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+                    const priceId = subscription.items.data[0].price.id;
+                    const dataExpiracao = new Date(subscription.current_period_end * 1000);
+                    
+                    const precoResult = await db.query("SELECT id, plano_id FROM precos_planos WHERE gateway_price_id = $1", [priceId]);
+                    if (precoResult.rowCount === 0) throw new Error(`Price ID [${priceId}] não encontrado.`);
+                    
                     const { id: preco_id, plano_id } = precoResult.rows[0];
-                    await client.query(
+
+                    const updateResult = await db.query(
                         `UPDATE pisciculturas SET plano_id = $1, preco_id = $2, status_assinatura = 'ATIVO', data_expiracao_assinatura = $3 WHERE stripe_customer_id = $4`,
                         [plano_id, preco_id, dataExpiracao, stripeCustomerId]
                     );
-                    console.log(`✅ Assinatura ativada para o cliente ${stripeCustomerId}`);
+                    
+                    if (updateResult.rowCount === 0) throw new Error(`Piscicultura com stripe_customer_id [${stripeCustomerId}] não encontrada.`);
+                    
+                    console.log(`✅ SUCESSO: Assinatura ATIVADA no banco de dados para o cliente [${stripeCustomerId}]`);
+                } catch(error) {
+                    console.error("❌ ERRO ao processar 'invoice.payment_succeeded':", error.message);
                 }
             }
-        }
-
-        await client.query('INSERT INTO eventos_stripe_processados (event_id) VALUES ($1)', [event.id]);
-        await client.query('COMMIT');
-        res.status(200).json({ received: true });
-    } catch (err) {
-        await client.query('ROLLBACK');
-        console.error('❌ ERRO CRÍTICO ao processar webhook:', err.message);
-        res.status(500).json({ error: 'Erro interno no processamento do webhook' });
-    } finally {
-        client.release();
+            break;
+        default:
+            console.log(`- Evento não tratado: ${event.type}`);
     }
+
+    res.status(200).json({ received: true });
 };
