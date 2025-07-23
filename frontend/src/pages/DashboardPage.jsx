@@ -96,7 +96,7 @@ function DashboardPage() {
         </Grid>
       </Grid>
       
-      <Box sx={{ mt: 4 }}>
+      <Box sx={{ mt: 7 }}>
         <TanquesDiagram tanques={diagrama_tanques} onTanqueClick={handleTanqueClick} />
       </Box>
 

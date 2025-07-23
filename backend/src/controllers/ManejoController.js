@@ -1,6 +1,8 @@
 // backend/src/controllers/ManejoController.js (VERSÃO COM CORREÇÃO DEFINITIVA)
 
 const db = require('../config/db');
+const registrarLog = require('../helpers/logHelper');
+
 
 exports.transferirLote = async (req, res) => {
     const { pisciculturaId } = req.user;
@@ -93,6 +95,12 @@ exports.transferirLote = async (req, res) => {
         }
 
         await client.query('COMMIT');
+
+        // --- LOG DA AÇÃO ---
+        const nomesTanquesDestino = destinos.map(d => d.tanqueId).join(', ');
+        await registrarLog(pisciculturaId, userId, nomeUsuario, `Realizou a transferência do Lote #${loteOrigemId} para ${destinos.length} destino(s) (Tanques: ${nomesTanquesDestino}).`);
+
+
         res.status(200).json({ success: true, message: 'Manejo de transferência realizado com sucesso!' });
 
     } catch (error) {

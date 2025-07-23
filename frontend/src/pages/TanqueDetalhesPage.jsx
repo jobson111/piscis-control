@@ -1,25 +1,29 @@
+// src/pages/TanqueDetalhesPage.jsx (VERSÃO COM HISTÓRICO COMPLETO DE LOTES)
+
+
 import { useState, useEffect } from 'react';
-import { useParams, Link as RouterLink } from 'react-router-dom';
+import { useParams, Link as RouterLink, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { 
-  Typography, 
-  CircularProgress, 
-  Button, 
-  Box, 
-  Paper, 
-  Modal, 
-  TextField,
-  List,
-  ListItem,
-  ListItemText,
-  IconButton
+    Typography, CircularProgress, Button, Box, Paper, Modal, TextField,
+    List, ListItem, ListItemText, IconButton, ListItemButton, Chip, Tabs, Tab, Grid
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import LoteList from '../components/LoteList';
-//import LoteForm from '../components/LoteForm';
 import QualidadeAguaList from '../components/QualidadeAguaList';
 import QualidadeAguaForm from '../components/QualidadeAguaForm';
+import LoteList from '../components/LoteList';
+import ExtratoTanque from '../components/ExtratoTanque'; // Importa o nosso novo componente
+
+
+function TabPanel(props) {
+    const { children, value, index, ...other } = props;
+    return (
+        <div role="tabpanel" hidden={value !== index} id={`tanque-tabpanel-${index}`} aria-labelledby={`tanque-tab-${index}`} {...other}>
+            {value === index && <Box sx={{ pt: 3 }}>{children}</Box>}
+        </div>
+    );
+}
 
 // Estilo para o Modal (para centralizá-lo)
 const style = {
@@ -34,13 +38,28 @@ const style = {
   p: 4,
 };
 
+const getStatusColor = (status) => {
+    switch (status) {
+        case 'Ativo':
+            return 'success';
+        case 'Vendido':
+        case 'Transferido':
+        case 'Finalizado com Perda':
+            return 'default';
+        default:
+            return 'secondary';
+    }
+};
+
 function TanqueDetalhesPage() {
   // --- STATES ---
   const { tanqueId } = useParams();
+  const navigate = useNavigate();
   const [tanque, setTanque] = useState(null);
   const [lotes, setLotes] = useState([]);
   const [registrosQualidadeAgua, setRegistrosQualidadeAgua] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [tabValue, setTabValue] = useState(0); // State para controlar a aba ativa
 
   // State para o Modal de Edição de Lote
   const [openModal, setOpenModal] = useState(false);
@@ -50,28 +69,32 @@ function TanqueDetalhesPage() {
 
   // --- DATA FETCHING ---
   useEffect(() => {
-    async function fetchData() {
-      setLoading(true);
-      try {
-        const [tanqueResponse, lotesResponse, qualidadeAguaResponse] = await Promise.all([
-          api.get(`/tanques/${tanqueId}`),
-          api.get(`/lotes?tanque_id=${tanqueId}`),
-          api.get(`/qualidade-agua?tanque_id=${tanqueId}`)
-        ]);
-        setTanque(tanqueResponse.data);
-        setLotes(lotesResponse.data);
-        setRegistrosQualidadeAgua(qualidadeAguaResponse.data);
-      } catch (error) {
-        console.error("Erro ao buscar dados do tanque:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchData();
-  }, [tanqueId]);
-
+        async function fetchData() {
+            setLoading(true);
+            try {
+                // AQUI ESTÁ A MUDANÇA: removemos o filtro `status=Ativo` da busca de lotes
+                const [tanqueResponse, lotesResponse, qualidadeAguaResponse] = await Promise.all([
+                    api.get(`/tanques/${tanqueId}`),
+                    api.get(`/lotes?tanque_id=${tanqueId}`), // Agora busca TODOS os lotes do tanque
+                    api.get(`/qualidade-agua?tanque_id=${tanqueId}`)
+                ]);
+                setTanque(tanqueResponse.data);
+                setLotes(lotesResponse.data);
+                setRegistrosQualidadeAgua(qualidadeAguaResponse.data);
+            } catch (error) {
+                console.error("Erro ao buscar dados do tanque:", error);
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetchData();
+    }, [tanqueId]);
   // --- HANDLER FUNCTIONS ---
 
+
+  const handleTabChange = (event, newValue) => {
+        setTabValue(newValue);
+    };
   // Para Lotes
 
   async function handleDeleteLote(id) {
@@ -175,36 +198,64 @@ function TanqueDetalhesPage() {
   if (!tanque) return <Typography>Tanque não encontrado.</Typography>;
 
   return (
-    <Box>
-      <Button component={RouterLink} to={`/pisciculturas/${tanque.piscicultura_id}`} variant="outlined" sx={{ mb: 2 }}>
-        Voltar para a Piscicultura
-      </Button>
+     <Box>
+            <Button component={RouterLink} to={`/pisciculturas/${tanque.piscicultura_id}`} variant="outlined" sx={{ mb: 2 }}>
+                Voltar para a Piscicultura
+            </Button>
 
-      <Paper elevation={1} sx={{p: 2, mb: 4}}>
-        <Typography variant="h5" gutterBottom>Tanque: {tanque.nome_identificador}</Typography>
-        <Typography variant="body1">Tipo: {tanque.tipo} | Dimensões: {tanque.dimensoes || 'N/A'}</Typography>
-      </Paper>
-      
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 4 }}>
-        
-        {/* Coluna da Esquerda: Lotes */}
-        <Box>
-          <LoteList lotes={lotes} onEdit={handleOpenModal} onDelete={handleDeleteLote} />
-         
-        </Box>
-
-        {/* Coluna da Direita: Qualidade da Água */}
-        <Box>
-            <QualidadeAguaList registros={registrosQualidadeAgua} onEdit={handleOpenQualidadeAguaModal} onDelete={handleDeleteQualidadeAgua} />
-            <QualidadeAguaForm 
-                pisciculturaId={tanque.piscicultura_id}
-                tanqueId={tanqueId}
-                corpoDaguaId={tanque.corpo_dagua_id}
-                onQualidadeAguaRegistada={handleNovaQualidadeAgua}
-            />
-        </Box>
-      </Box>
-
+            <Paper elevation={1} sx={{p: 2, mb: 2}}>
+                <Typography variant="h5" gutterBottom>Tanque: {tanque.nome_identificador}</Typography>
+                <Typography variant="body1">Tipo: {tanque.tipo} | Dimensões: {tanque.dimensoes || 'N/A'}</Typography>
+            </Paper>
+            
+            <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+                <Tabs value={tabValue} onChange={handleTabChange} aria-label="abas de detalhes do tanque">
+                    <Tab label="Visão Geral" id="tanque-tab-0" />
+                    <Tab label="Extrato do Tanque" id="tanque-tab-1" />
+                </Tabs>
+            </Box>
+            
+            <TabPanel value={tabValue} index={0}>
+                {/* A sua "Visão Geral" antiga agora vive aqui dentro */}
+                <Grid container spacing={4}>
+                    <Grid item xs={12} md={6}>
+                        <Paper elevation={2} sx={{ p: 2, height: '100%' }}>
+                            <Typography variant="h6" gutterBottom>Histórico de Lotes no Tanque</Typography>
+                            <List>
+                                {lotes.length > 0 ? (
+                                    lotes.map(lote => (
+                                        <ListItem key={lote.id} disablePadding divider>
+                                            <ListItemButton component={RouterLink} to={`/lotes/${lote.id}`}>
+                                                <ListItemText 
+                                                    primary={`Lote de ${lote.especie} (ID: ${lote.id})`}
+                                                    secondary={`Entrada: ${new Date(lote.data_entrada).toLocaleDateString('pt-BR')}`}
+                                                />
+                                                <Chip label={lote.status} color={getStatusColor(lote.status)} size="small" />
+                                            </ListItemButton>
+                                        </ListItem>
+                                    ))
+                                ) : (
+                                    <Typography sx={{ p: 2 }}>Nenhum lote registado para este tanque.</Typography>
+                                )}
+                            </List>
+                        </Paper>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                        <QualidadeAguaList registros={registrosQualidadeAgua} onEdit={handleOpenQualidadeAguaModal} onDelete={handleDeleteQualidadeAgua} />
+                        <QualidadeAguaForm 
+                            pisciculturaId={tanque.piscicultura_id}
+                            tanqueId={tanqueId}
+                            corpoDaguaId={tanque.corpo_dagua_id}
+                            onQualidadeAguaRegistada={handleNovaQualidadeAgua}
+                        />
+                    </Grid>
+                </Grid>
+            </TabPanel>
+            
+            <TabPanel value={tabValue} index={1}>
+                {/* A nossa nova funcionalidade de extrato vive aqui */}
+                <ExtratoTanque tanqueId={tanqueId} />
+            </TabPanel>
       {/* Modal de Edição de Lote */}
       <Modal open={openModal} onClose={handleCloseModal}>
         <Box sx={style}>

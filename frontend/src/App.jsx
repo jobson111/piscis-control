@@ -24,8 +24,15 @@ import PrestacaoContasPage from './pages/PrestacaoContasPage'; //import prestaç
 import RelatorioEstoquePage from './pages/RelatorioEstoquePage'; // Importe a nova página relatorio estoque
 import RelatorioVendasPage from './pages/RelatorioVendasPage'; // Importe a nova página relatorio vendas
 import RelatorioDesempenhoLotePage from './pages/RelatorioDesempenhoLotePage'; // Importe lotes
+import RelatorioTransferenciasPage from './pages/RelatorioTransferenciasPage'; // Importe a nova página
 import PlanosPage from './pages/PlanosPage'; //import planos
 import AssinaturaSucessoPage from './pages/AssinaturaSucessoPage'; //importa assinaturas de planos
+import LogAtividadesPage from './pages/LogAtividadesPage'; // Importe a nova página de logs
+import ConfiguracoesPage from './pages/ConfiguracoesPage'; // Importe a nova página
+import RelatorioFluxoCaixaPage from './pages/RelatorioFluxoCaixaPage'; // Importe a nova página
+
+
+
 
 
 
@@ -72,6 +79,13 @@ function App() {
         <Route path="/relatorios/desempenho-lote/:loteId" element={<MainLayout><RelatorioDesempenhoLotePage /></MainLayout>} />
         <Route path="/planos" element={<MainLayout><PlanosPage /></MainLayout>} />
         <Route path="/assinatura/sucesso" element={<MainLayout><AssinaturaSucessoPage /></MainLayout>} />
+        <Route path="/relatorios/transferencias" element={<MainLayout><RelatorioTransferenciasPage /></MainLayout>} />
+        <Route path="/logs" element={<MainLayout><LogAtividadesPage /></MainLayout>} />
+        <Route path="/configuracoes" element={<MainLayout><ConfiguracoesPage /></MainLayout>} />
+        <Route path="/relatorios/fluxo-caixa" element={<MainLayout><RelatorioFluxoCaixaPage /></MainLayout>} />
+
+
+
 
 
 

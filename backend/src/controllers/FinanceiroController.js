@@ -1,9 +1,11 @@
 // backend/src/controllers/FinanceiroController.js (VERSÃO COM VALIDAÇÃO CORRIGIDA)
 
 const db = require('../config/db');
+const registrarLog = require('../helpers/logHelper');
+
 
 exports.createPrestacaoContas = async (req, res) => {
-    const { pisciculturaId } = req.user;
+    const { pisciculturaId,  userId, nome: nomeUsuario } = req.user;
     const {
         usuario_id, 
         vendas_ids, 
@@ -75,6 +77,10 @@ exports.createPrestacaoContas = async (req, res) => {
         }
 
         await client.query('COMMIT');
+
+         // --- LOG DA AÇÃO ---
+        await registrarLog(pisciculturaId, userId, nomeUsuario, `Realizou uma prestação de contas, conciliando ${vendas_ids.length} venda(s).`);
+
         res.status(201).json({ success: true, message: 'Prestação de contas realizada com sucesso!' });
 
     } catch (error) {

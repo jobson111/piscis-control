@@ -3,6 +3,8 @@
 const db = require('../config/db');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const registrarLog = require('../helpers/logHelper');
+
 
 // --- REGISTRO DE UM NOVO USUÁRIO E SUA PISCICULTURA ---
 // SUBSTITUA a função 'register' por esta
@@ -45,6 +47,12 @@ exports.register = async (req, res) => {
         await client.query("INSERT INTO usuario_cargos (usuario_id, cargo_id) VALUES ($1, $2)", [novoUsuarioId, adminCargoId]);
 
         await client.query('COMMIT');
+
+        // --- LOG DA AÇÃO ---
+        // Usamos os dados que acabámos de criar
+        await registrarLog(novaPisciculturaId, novoUsuarioId, nomeUsuario, `Registou a piscicultura '${nomePiscicultura}' e o usuário administrador.`);
+
+        
         res.status(201).json({ success: true, message: "Registado com sucesso no período de teste!" });
     } catch (error) {
         await client.query('ROLLBACK');

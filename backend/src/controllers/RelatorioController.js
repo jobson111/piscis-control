@@ -33,11 +33,215 @@ exports.getEstoqueAtual = async (req, res) => {
     }
 };
 
+exports.getExtratoTanque = async (req, res) => {
+    const { pisciculturaId } = req.user;
+    const tanqueId = parseInt(req.params.tanqueId, 10);
+
+    if (isNaN(tanqueId)) {
+        return res.status(400).json({ error: 'ID de tanque inválido.' });
+    }
+
+    try {
+        // A consulta agora seleciona colunas extras para os detalhes
+        const sql = `
+            SELECT 
+                evento_id, tipo, data_evento, descricao, detalhes
+            FROM (
+                -- Eventos de Entrada de Lote
+                SELECT 
+                    l.id AS evento_id, 'ENTRADA DE LOTE' as tipo, l.data_entrada as data_evento,
+                    'Lote ' || l.id || ' (' || l.especie || ') recebido no tanque.' as descricao,
+                    json_build_object(
+                        'Quantidade', l.quantidade_inicial,
+                        'Peso Médio (g)', l.peso_inicial_medio_g
+                    ) as detalhes
+                FROM lotes l
+                WHERE l.tanque_id = $1 AND l.piscicultura_id = $2 AND l.lote_origem_id IS NULL
+
+                UNION ALL
+
+                -- Eventos de Transferência (Entrada)
+                SELECT 
+                    l.id AS evento_id, 'TRANSFERÊNCIA (ENTRADA)' as tipo, l.data_entrada as data_evento,
+                    'Recebimento do Lote ' || l.id || ' a partir do Lote ' || l.lote_origem_id || '.' as descricao,
+                     json_build_object(
+                        'Quantidade', l.quantidade_inicial,
+                        'Peso Médio (g)', l.peso_inicial_medio_g
+                    ) as detalhes
+                FROM lotes l
+                WHERE l.tanque_id = $1 AND l.piscicultura_id = $2 AND l.lote_origem_id IS NOT NULL
+
+                UNION ALL
+
+                -- Eventos de Alimentação
+                SELECT 
+                    ra.id AS evento_id, 'ALIMENTAÇÃO' as tipo, ra.data_alimentacao as data_evento,
+                    'Fornecido ' || ra.tipo_racao as descricao,
+                    json_build_object('Quantidade (kg)', ra.quantidade_kg) as detalhes
+                FROM registros_alimentacao ra
+                JOIN lotes l ON ra.lote_id = l.id
+                WHERE l.tanque_id = $1 AND ra.piscicultura_id = $2
+
+                UNION ALL
+
+                -- Eventos de Biometria
+                SELECT
+                    b.id AS evento_id, 'BIOMETRIA' as tipo, b.data_biometria as data_evento,
+                    'Aferição de peso médio.' as descricao,
+                    json_build_object(
+                        'Peso Médio (g)', b.peso_medio_gramas,
+                        'Amostra (unidades)', b.quantidade_amostra
+                    ) as detalhes
+                FROM biometrias b
+                JOIN lotes l ON b.lote_id = l.id
+                WHERE l.tanque_id = $1 AND b.piscicultura_id = $2
+
+                UNION ALL
+
+                -- Eventos de Venda (saída)
+                SELECT
+                    vi.id AS evento_id, 'VENDA' as tipo, v.data_venda as data_evento,
+                    'Venda para o cliente ' || c.nome as descricao,
+                    json_build_object('Quantidade (kg)', vi.quantidade_kg) as detalhes
+                FROM venda_itens vi
+                JOIN vendas v ON vi.venda_id = v.id
+                JOIN clientes c ON v.cliente_id = c.id
+                JOIN lotes l ON vi.lote_id = l.id
+                WHERE l.tanque_id = $1 AND v.piscicultura_id = $2
+            ) AS eventos
+            ORDER BY data_evento DESC, evento_id DESC;
+        `;
+
+        const result = await db.query(sql, [tanqueId, pisciculturaId]);
+        res.status(200).json(result.rows);
+
+    } catch (error) {
+        console.error("Erro ao gerar extrato do tanque:", error);
+        res.status(500).json({ error: "Erro interno do servidor." });
+    }
+};
+
+exports.getHistoricoTransferencias = async (req, res) => {
+    const { pisciculturaId } = req.user;
+    // Novos filtros que podemos receber da URL
+    const { data_inicio, data_fim, tanque_origem_id, tanque_destino_id } = req.query;
+
+    try {
+        let sql = `
+            SELECT
+                origem.id as lote_origem_id,
+                origem.data_saida_real as data_transferencia,
+                tanque_origem.nome_identificador as nome_tanque_origem,
+                origem.especie,
+                jsonb_agg(
+                    jsonb_build_object(
+                        'lote_destino_id', destino.id,
+                        'nome_tanque_destino', tanque_destino.nome_identificador,
+                        'quantidade', destino.quantidade_inicial,
+                        'peso_medio_g', destino.peso_inicial_medio_g
+                    ) ORDER BY tanque_destino.nome_identificador
+                ) as destinos
+            FROM
+                lotes destino
+            JOIN
+                lotes origem ON destino.lote_origem_id = origem.id
+            JOIN
+                tanques tanque_origem ON origem.tanque_id = tanque_origem.id
+            JOIN
+                tanques tanque_destino ON destino.tanque_id = tanque_destino.id
+            WHERE
+                destino.piscicultura_id = $1 AND origem.status IN ('Transferido', 'Finalizado com Perda')
+        `;
+        
+        const values = [pisciculturaId];
+        let paramIndex = 2;
+
+        if (data_inicio) {
+            sql += ` AND origem.data_saida_real >= $${paramIndex++}`;
+            values.push(data_inicio);
+        }
+        if (data_fim) {
+            sql += ` AND origem.data_saida_real <= $${paramIndex++}`;
+            values.push(data_fim);
+        }
+        if (tanque_origem_id) {
+            sql += ` AND origem.tanque_id = $${paramIndex++}`;
+            values.push(tanque_origem_id);
+        }
+        // O filtro por tanque de destino é mais complexo, pois está dentro do array agregado.
+        // Vamos deixá-lo para um futuro refinamento se for necessário.
+
+        sql += ` 
+            GROUP BY
+                origem.id, origem.data_saida_real, tanque_origem.nome_identificador, origem.especie
+            ORDER BY
+                origem.data_saida_real DESC;
+        `;
+
+        const result = await db.query(sql, values);
+        res.status(200).json(result.rows);
+
+    } catch (error) {
+        console.error("Erro ao gerar relatório de transferências:", error);
+        res.status(500).json({ error: "Erro interno do servidor." });
+    }
+};
+
+exports.getFluxoDeCaixa = async (req, res) => {
+    const { pisciculturaId } = req.user;
+    // Pega o intervalo de datas da query string da URL
+    const { data_inicio, data_fim } = req.query;
+
+    if (!data_inicio || !data_fim) {
+        return res.status(400).json({ error: 'É obrigatório fornecer uma data de início e uma data de fim.' });
+    }
+
+    try {
+        const sql = `
+            WITH MovimentacoesPeriodo AS (
+                SELECT
+                    tipo,
+                    valor,
+                    COALESCE(cd.nome, 'Receitas de Vendas') as categoria
+                FROM movimentacoes_financeiras mf
+                LEFT JOIN categorias_de_despesa cd ON mf.categoria_id = cd.id
+                WHERE 
+                    mf.piscicultura_id = $1 AND 
+                    mf.data_movimentacao BETWEEN $2 AND $3
+            )
+            SELECT
+                (SELECT COALESCE(SUM(valor), 0) FROM MovimentacoesPeriodo WHERE tipo = 'RECEITA') as total_receitas,
+                (SELECT COALESCE(SUM(valor), 0) FROM MovimentacoesPeriodo WHERE tipo = 'DESPESA') as total_despesas,
+                -- Agrupa as despesas por categoria
+                jsonb_agg(
+                    jsonb_build_object('categoria', categoria, 'total', valor)
+                ) FILTER (WHERE tipo = 'DESPESA') as despesas_por_categoria
+            FROM MovimentacoesPeriodo;
+        `;
+        
+        // Esta é uma consulta mais complexa que usa CTEs (Common Table Expressions) para organizar a lógica
+        const result = await db.query(sql, [pisciculturaId, data_inicio, data_fim]);
+        
+        // Adicionamos um pequeno ajuste para agregar os valores das categorias
+        const reportData = result.rows[0];
+        const despesasAgregadas = {};
+        if (reportData.despesas_por_categoria) {
+            reportData.despesas_por_categoria.forEach(d => {
+                despesasAgregadas[d.categoria] = (despesasAgregadas[d.categoria] || 0) + parseFloat(d.total);
+            });
+        }
+        reportData.despesas_por_categoria = Object.entries(despesasAgregadas).map(([categoria, total]) => ({categoria, total}));
+
+        res.status(200).json(reportData);
+
+    } catch (error) {
+        console.error("Erro ao gerar relatório de fluxo de caixa:", error);
+        res.status(500).json({ error: "Erro interno do servidor." });
+    }
+};
 
 // --- FUNÇÃO DE DESEMPENHO DE LOTE BLINDADA ---
-// Em backend/src/controllers/RelatorioController.js
 // SUBSTITUA a sua função 'getDesempenhoLote' por esta
-
 exports.getDesempenhoLote = async (req, res) => {
     const { pisciculturaId } = req.user;
     const loteId = parseInt(req.params.loteId, 10);

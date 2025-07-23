@@ -1,6 +1,8 @@
 // src/controllers/EntradaPeixesController.js (VERSÃO FINAL COM LÓGICA INTELIGENTE)
 
 const db = require('../config/db');
+const registrarLog = require('../helpers/logHelper'); // Importe a ferramenta de log
+
 
 // --- LISTAR todas as entradas de uma piscicultura ---
 exports.list = async (req, res) => {
@@ -21,7 +23,7 @@ exports.list = async (req, res) => {
 // --- CRIAR uma nova entrada e seus lotes (COM LÓGICA DE TANQUE OCUPADO) ---
 exports.create = async (req, res) => {
      // A ÚNICA fonte de verdade para o ID da piscicultura agora é o token do usuário.
-    const { pisciculturaId } = req.user; 
+    const { pisciculturaId, userId, nome: nomeUsuario } = req.user; 
 
     // Os dados que vêm do frontend não precisam mais de incluir o piscicultura_id.
     const { entradaData, lotesData } = req.body;
@@ -102,6 +104,14 @@ exports.create = async (req, res) => {
         }
 
         await client.query('COMMIT');
+
+        await registrarLog(
+            pisciculturaId,
+            userId,
+            nomeUsuario,
+            `Registou uma nova Entrada de Peixes (ID: ${novaEntradaId}) com ${lotesData.length} lote(s), baseada na NF '${entradaData.nr_nota_fiscal || 'N/A'}'.`
+        );
+        
         res.status(201).json({ success: true, message: 'Entrada e lotes criados/atualizados com sucesso!', entrada_id: novaEntradaId });
 
     } catch (error) {

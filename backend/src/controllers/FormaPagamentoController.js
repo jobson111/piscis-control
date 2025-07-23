@@ -1,14 +1,26 @@
 // backend/src/controllers/FormaPagamentoController.js
 const db = require('../config/db');
+const registrarLog = require('../helpers/logHelper'); // Não se esqueça de importar no topo do ficheiro
+
 
 exports.create = async (req, res) => {
-    const { pisciculturaId } = req.user;
+    const { pisciculturaId, userId, nome: nomeUsuario } = req.user;
     const { descricao } = req.body;
     try {
         const result = await db.query(
             'INSERT INTO formas_pagamento (piscicultura_id, descricao) VALUES ($1, $2) RETURNING *',
             [pisciculturaId, descricao]
         );
+
+        const novaFormaPagamento = result.rows[0];
+        // 2. Registamos a ação no log com as variáveis corretas e o campo certo
+        await registrarLog(
+            pisciculturaId, 
+            userId, 
+            nomeUsuario, 
+            `Criou a forma de pagamento '${novaFormaPagamento.descricao}' (ID: ${novaFormaPagamento.id}).`
+        );
+
         res.status(201).json(result.rows[0]);
     } catch (error) {
         res.status(500).json({ error: 'Erro interno do servidor.' });
@@ -29,7 +41,7 @@ exports.list = async (req, res) => {
 };
 
 exports.update = async (req, res) => {
-    const { pisciculturaId } = req.user;
+    const { pisciculturaId, userId, nome: nomeUsuario } = req.user;
     const { id } = req.params;
     const { descricao, ativo } = req.body;
     try {

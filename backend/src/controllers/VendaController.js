@@ -1,37 +1,54 @@
 // backend/src/controllers/VendaController.js (VERSÃO COM VALIDAÇÃO ROBUSTA)
 
 const db = require('../config/db');
+const registrarLog = require('../helpers/logHelper');
+
 
 exports.create = async (req, res) => {
-    const { pisciculturaId, id: vendedorId } = req.user;
+    const { pisciculturaId, id: vendedorId, userId, nome: nomeUsuario } = req.user;
     const { cliente_id, nr_nota_fiscal, data_venda, valor_bruto, valor_desconto, valor_final, observacoes, itens, pagamentos } = req.body;
 
-    if (!cliente_id || !itens || itens.length === 0 || !pagamentos || pagamentos.length === 0) {
+    if (!cliente_id || !itens || !Array.isArray(itens) || itens.length === 0 || !pagamentos || !Array.isArray(pagamentos) || pagamentos.length === 0) {
         return res.status(400).json({ error: 'Dados da venda, itens e pagamentos são obrigatórios.' });
     }
 
     const client = await db.pool.connect();
 
     try {
-        // VERIFICAÇÃO DE NOTA FISCAL DUPLICADA (MELHORIA 5)
+        await client.query('BEGIN');
+
+        // 1. Busca o modelo financeiro da piscicultura para decidir o fluxo
+        const pisciculturaResult = await client.query('SELECT modelo_financeiro FROM pisciculturas WHERE id = $1', [pisciculturaId]);
+        const modeloFinanceiro = pisciculturaResult.rows[0].modelo_financeiro;
+
+        // 2. Define o status de pagamento inicial com base no modelo
+        const statusPagamentoInicial = modeloFinanceiro === 'DIRETO' ? 'Pago' : 'Pendente';
+
+        // 3. Verifica a nota fiscal duplicada
         if (nr_nota_fiscal) {
             const notaFiscalExistente = await client.query(
                 "SELECT id FROM vendas WHERE nr_nota_fiscal = $1 AND piscicultura_id = $2",
                 [nr_nota_fiscal, pisciculturaId]
             );
             if (notaFiscalExistente.rowCount > 0) {
-                throw new Error(`A Nota Fiscal de número ${nr_nota_fiscal} já foi registada numa outra venda.`);
+                throw new Error(`A Nota Fiscal de número ${nr_nota_fiscal} já foi registada.`);
             }
         }
         
-        await client.query('BEGIN');
-
-        // 1. Inserir o "cabeçalho" da venda
-        const vendaSql = `INSERT INTO vendas (piscicultura_id, cliente_id, vendedor_id, nr_nota_fiscal, data_venda, valor_bruto, valor_desconto, valor_final, observacoes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id;`;
-        const vendaResult = await client.query(vendaSql, [pisciculturaId, cliente_id, vendedorId, nr_nota_fiscal, data_venda, valor_bruto, valor_desconto, valor_final, observacoes]);
+        // 4. Insere o "cabeçalho" da venda com o status de pagamento correto
+        const vendaSql = `
+            INSERT INTO vendas (
+                piscicultura_id, cliente_id, vendedor_id, nr_nota_fiscal, data_venda, 
+                valor_bruto, valor_desconto, valor_final, observacoes, status_pagamento
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id;
+        `;
+        const vendaResult = await client.query(vendaSql, [
+            pisciculturaId, cliente_id, vendedorId, nr_nota_fiscal, data_venda, 
+            valor_bruto, valor_desconto, valor_final, observacoes, statusPagamentoInicial
+        ]);
         const novaVendaId = vendaResult.rows[0].id;
 
-        // 2. Processar cada ITEM do "carrinho"
+        // 5. Processa cada ITEM do "carrinho" (baixa de estoque)
         for (const item of itens) {
             const loteIdNum = parseInt(item.lote_id, 10);
             const pesoMedioGramas = parseFloat(item.peso_medio_na_venda_g);
@@ -49,7 +66,6 @@ exports.create = async (req, res) => {
             const novaQuantidadeLote = lote.quantidade_atual - quantidadePeixesVendida;
             const novoStatusLote = novaQuantidadeLote <= 0 ? 'Vendido' : 'Ativo';
             
-            // ATUALIZAÇÃO DE PESO DO LOTE DE ORIGEM (MELHORIA 3)
             await client.query("UPDATE lotes SET quantidade_atual = $1, status = $2, peso_atual_medio_g = $3 WHERE id = $4", [novaQuantidadeLote, novoStatusLote, pesoMedioGramas, loteIdNum]);
 
             if (novoStatusLote === 'Vendido') {
@@ -57,12 +73,34 @@ exports.create = async (req, res) => {
             }
         }
 
-        // 3. Processar cada PAGAMENTO
+        // 6. Processa cada PAGAMENTO
         for (const pgto of pagamentos) {
             await client.query('INSERT INTO venda_pagamentos (venda_id, forma_pagamento_id, valor) VALUES ($1, $2, $3)', [novaVendaId, parseInt(pgto.forma_pagamento_id, 10), parseFloat(pgto.valor)]);
         }
 
+        // 7. Se for o modelo DIRETO, cria a movimentação financeira automaticamente
+        if (modeloFinanceiro === 'DIRETO') {
+            const contaCaixaResult = await client.query("SELECT id FROM contas_financeiras WHERE piscicultura_id = $1 AND nome ILIKE '%caixa%' AND ativo = TRUE LIMIT 1", [pisciculturaId]);
+            if (contaCaixaResult.rowCount === 0) {
+                throw new Error("Nenhuma conta 'Caixa' ativa foi encontrada para o recebimento automático. Por favor, configure uma em 'Contas Financeiras'.");
+            }
+            const contaCaixaId = contaCaixaResult.rows[0].id;
+            
+            await client.query(
+                `INSERT INTO movimentacoes_financeiras (piscicultura_id, descricao, valor, tipo, data_movimentacao, conta_id, venda_id) VALUES ($1, $2, $3, 'RECEITA', $4, $5, $6)`,
+                [pisciculturaId, `Receita da Venda #${novaVendaId}`, valor_final, data_venda, contaCaixaId, novaVendaId]
+            );
+            await client.query(
+                `UPDATE contas_financeiras SET saldo_atual = saldo_atual + $1 WHERE id = $2`,
+                [valor_final, contaCaixaId]
+            );
+        }
+
         await client.query('COMMIT');
+
+        // --- Registo do Log ---
+        await registrarLog(pisciculturaId, userId, nomeUsuario, `Registou a Venda #${novaVendaId} no valor de ${parseFloat(valor_final).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}.`);
+
         res.status(201).json({ success: true, message: 'Venda registada com sucesso!', vendaId: novaVendaId });
     } catch (error) {
         await client.query('ROLLBACK');

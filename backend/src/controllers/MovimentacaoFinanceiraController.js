@@ -1,6 +1,8 @@
 // backend/src/controllers/MovimentacaoFinanceiraController.js (VERSÃO COMPLETA)
 
 const db = require('../config/db');
+const registrarLog = require('../helpers/logHelper'); // Importe a ferramenta de log
+
 
 // --- LISTAR TODAS AS MOVIMENTAÇÕES (EXTRATO) ---
 exports.list = async (req, res) => {
@@ -30,7 +32,7 @@ exports.list = async (req, res) => {
 
 // --- CRIAR UMA NOVA DESPESA ---
 exports.createDespesa = async (req, res) => {
-    const { pisciculturaId } = req.user;
+    const { pisciculturaId, userId, nome: nomeUsuario } = req.user;
     const { conta_id, categoria_id, valor, descricao, data_movimentacao } = req.body;
 
     if (!conta_id || !valor || !data_movimentacao || !descricao) {
@@ -46,6 +48,14 @@ exports.createDespesa = async (req, res) => {
         await client.query(`UPDATE contas_financeiras SET saldo_atual = saldo_atual - $1 WHERE id = $2 AND piscicultura_id = $3`, [valor, conta_id, pisciculturaId]);
         
         await client.query('COMMIT');
+        // --- REGISTO DO LOG ---
+        await registrarLog(
+            pisciculturaId,
+            userId,
+            nomeUsuario,
+            `Registou uma Despesa de ${parseFloat(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} com a descrição: '${descricao}'.`
+        );
+
         res.status(201).json({ success: true, message: 'Despesa registada com sucesso!' });
     } catch (error) {
         await client.query('ROLLBACK');
@@ -58,7 +68,7 @@ exports.createDespesa = async (req, res) => {
 
 // --- NOVA FUNÇÃO: CRIAR UMA NOVA RECEITA ---
 exports.createReceita = async (req, res) => {
-    const { pisciculturaId } = req.user;
+    const { pisciculturaId, userId, nome: nomeUsuario } = req.user;
     const { conta_id, valor, descricao, data_movimentacao } = req.body;
 
     if (!conta_id || !valor || !data_movimentacao || !descricao) {
@@ -74,6 +84,14 @@ exports.createReceita = async (req, res) => {
         await client.query(`UPDATE contas_financeiras SET saldo_atual = saldo_atual + $1 WHERE id = $2 AND piscicultura_id = $3`, [valor, conta_id, pisciculturaId]);
         
         await client.query('COMMIT');
+        // --- REGISTO DO LOG ---
+        await registrarLog(
+            pisciculturaId,
+            userId,
+            nomeUsuario,
+            `Registou uma Receita de ${parseFloat(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} com a descrição: '${descricao}'.`
+        );
+
         res.status(201).json({ success: true, message: 'Receita registada com sucesso!' });
     } catch (error) {
         await client.query('ROLLBACK');
@@ -86,7 +104,7 @@ exports.createReceita = async (req, res) => {
 
 // --- NOVA FUNÇÃO: CRIAR UMA TRANSFERÊNCIA ENTRE CONTAS ---
 exports.createTransferencia = async (req, res) => {
-    const { pisciculturaId } = req.user;
+    const { pisciculturaId, userId, nome: nomeUsuario } = req.user;
     const { conta_origem_id, conta_destino_id, valor, descricao, data_movimentacao } = req.body;
 
     if (!conta_origem_id || !conta_destino_id || !valor || !data_movimentacao) {
@@ -109,6 +127,14 @@ exports.createTransferencia = async (req, res) => {
         await client.query(`UPDATE contas_financeiras SET saldo_atual = saldo_atual + $1 WHERE id = $2 AND piscicultura_id = $3`, [valor, conta_destino_id, pisciculturaId]);
 
         await client.query('COMMIT');
+        // --- REGISTO DO LOG ---
+        await registrarLog(
+            pisciculturaId,
+            userId,
+            nomeUsuario,
+            `Realizou uma Transferência de ${parseFloat(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}. Descrição: '${desc}'.`
+        );
+        
         res.status(201).json({ success: true, message: 'Transferência realizada com sucesso!' });
     } catch (error) {
         await client.query('ROLLBACK');

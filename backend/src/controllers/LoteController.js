@@ -9,12 +9,9 @@ const db = require('../config/db');
 // Esta função agora é 100% segura, usando o ID do token.
 // --- FUNÇÃO DE BUSCA UNIFICADA E SEGURA (LISTAR E BUSCAR POR ID) ---
 exports.find = async (request, response) => {
-    // ID seguro vindo do token de autenticação
     const { pisciculturaId } = request.user;
-    
-    // Parâmetros que podem vir da requisição
-    const loteIdParam = request.params.id;         // da URL, ex: /lotes/5
-    const { tanque_id, status } = request.query;   // da query string, ex: /lotes?status=Ativo
+    const loteIdParam = request.params.id;
+    const { tanque_id, status } = request.query;
 
     try {
         const baseQuery = `
@@ -30,34 +27,29 @@ exports.find = async (request, response) => {
         let paramIndex = 2;
 
         if (loteIdParam) {
-            // Se um ID foi passado na URL, busca um lote específico
             conditions.push(`l.id = $${paramIndex++}`);
             values.push(parseInt(loteIdParam, 10));
         }
-
         if (tanque_id) {
-            // Se um tanque_id foi passado na query, adiciona o filtro
             conditions.push(`l.tanque_id = $${paramIndex++}`);
             values.push(tanque_id);
         }
-
+        
+        // --- AQUI ESTÁ A MUDANÇA ---
+        // O filtro de status só é adicionado se ele for explicitamente enviado pelo frontend
         if (status) {
-            // Se um status foi passado na query, adiciona o filtro
             conditions.push(`l.status = $${paramIndex++}`);
             values.push(status);
         }
 
-        // Monta a consulta final
-        const sql = `${baseQuery} WHERE ${conditions.join(' AND ')} ORDER BY LENGTH(t.nome_identificador), t.nome_identificador, l.data_entrada DESC`;
+        const sql = `${baseQuery} WHERE ${conditions.join(' AND ')} ORDER BY l.id DESC`;
 
         const result = await db.query(sql, values);
 
-        // Se a busca foi por um ID específico e não encontrou nada, retorna 404
         if (loteIdParam && result.rowCount === 0) {
             return response.status(404).json({ error: 'Lote não encontrado ou não pertence à sua piscicultura.' });
         }
         
-        // Se a busca foi por ID, retorna um único objeto; senão, retorna a lista (array)
         return response.status(200).json(loteIdParam ? result.rows[0] : result.rows);
 
     } catch (error) {

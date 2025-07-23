@@ -20,6 +20,12 @@ import SummarizeIcon from '@mui/icons-material/Summarize';
 import AssessmentIcon from '@mui/icons-material/Assessment'; // Ícone para Relatórios
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn'; // Ícone para Relatório de Vendas
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium'; //configuraçoes
+import HistoryIcon from '@mui/icons-material/History'; // Ícone para o Log
+import SettingsIcon from '@mui/icons-material/Settings'; // Ícone para Configurações
+import PaidIcon from '@mui/icons-material/Paid'; // Ícone para Fluxo de Caixa
+
+
+
 
 
 
@@ -126,7 +132,7 @@ function MainLayout({ children }) {
                     <ListItem>
                         <Typography variant="overline">Relatórios</Typography>
                     </ListItem>
-                   {/* --- NOVO ITEM DE MENU relatorio estiqye atual --- */}
+                   {/* --- NOVO ITEM DE MENU relatorio estoque atual --- */}
                     <ListItem disablePadding component={NavLink} to="/relatorios/estoque" style={{color: 'inherit'}}>
                         <ListItemButton>
                             <ListItemIcon><AssessmentIcon /></ListItemIcon>
@@ -140,11 +146,39 @@ function MainLayout({ children }) {
                             <ListItemText primary="Relatório de Vendas" />
                         </ListItemButton>
                     </ListItem>
+                    {/* --- NOVO ITEM DE MENU relatorio TRANSFERENCIAS --- */}
+                    <ListItem disablePadding component={NavLink} to="/relatorios/transferencias" style={{color: 'inherit'}}>
+                        <ListItemButton>
+                            <ListItemIcon><CompareArrowsIcon /></ListItemIcon>
+                            <ListItemText primary="Histórico de Transferências" />
+                        </ListItemButton>
+                    </ListItem>
+                    {/* --- NOVO ITEM DE MENU relatorio FLUXO de Caixa --- */}
+                    <ListItem disablePadding component={NavLink} to="/relatorios/fluxo-caixa" style={{color: 'inherit'}}>
+                        <ListItemButton>
+                            <ListItemIcon><PaidIcon /></ListItemIcon>
+                            <ListItemText primary="Fluxo de Caixa" />
+                        </ListItemButton>
+                    </ListItem>
                     {/* --- NOVO ITEM DE MENU PLANOS --- */}
                     <ListItem disablePadding component={NavLink} to="/planos" style={{color: 'inherit'}}>
                         <ListItemButton>
                             <ListItemIcon><WorkspacePremiumIcon /></ListItemIcon>
                             <ListItemText primary="Planos e Assinatura" />
+                        </ListItemButton>
+                    </ListItem>
+                    {/* --- NOVO ITEM DE MENU LOGS --- */}
+                    <ListItem disablePadding component={NavLink} to="/logs" style={{color: 'inherit'}}>
+                        <ListItemButton>
+                            <ListItemIcon><HistoryIcon /></ListItemIcon>
+                            <ListItemText primary="Log de Atividades" />
+                        </ListItemButton>
+                    </ListItem>
+                    {/* --- NOVO ITEM DE MENU CONFIGURAÇÕES --- */}
+                    <ListItem disablePadding component={NavLink} to="/configuracoes" style={{color: 'inherit'}}>
+                        <ListItemButton>
+                            <ListItemIcon><SettingsIcon /></ListItemIcon>
+                            <ListItemText primary="Configurações" />
                         </ListItemButton>
                     </ListItem>
                 </List>

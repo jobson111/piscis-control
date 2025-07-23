@@ -40,6 +40,34 @@ exports.getById = async (req, res) => {
     }
 };
 
+// Adicione esta nova função ao seu PisciculturaController.js
+
+exports.updateConfiguracoes = async (req, res) => {
+    const { pisciculturaId } = req.user;
+    const { modelo_financeiro } = req.body;
+
+    // Validação para garantir que o valor é um dos esperados
+    if (!modelo_financeiro || !['DIRETO', 'CONCILIACAO'].includes(modelo_financeiro)) {
+        return res.status(400).json({ error: 'Modelo financeiro inválido.' });
+    }
+
+    try {
+        const result = await db.query(
+            'UPDATE pisciculturas SET modelo_financeiro = $1 WHERE id = $2',
+            [modelo_financeiro, pisciculturaId]
+        );
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'Piscicultura não encontrada.' });
+        }
+
+        res.status(200).json({ success: true, message: 'Configurações salvas com sucesso!' });
+    } catch (error) {
+        console.error('Erro ao atualizar configurações da piscicultura:', error);
+        res.status(500).json({ error: 'Erro interno do servidor.' });
+    }
+};
+
 // Atualiza os dados da piscicultura do usuário logado
 exports.update = async (req, res) => {
     const { pisciculturaId } = req.user;

@@ -33,6 +33,8 @@ const usuarioRouter = require('./routes/usuario.routes');
 const cargoRouter = require('./routes/cargo.routes');
 const dashboardRouter = require('./routes/dashboard.routes');
 const entradaPeixesRouter = require('./routes/entradaPeixes.routes');
+const logRouter = require('./routes/log.routes');
+
 
 const app = express();
 app.use(cors());
@@ -71,6 +73,7 @@ app.use('/qualidade-agua', qualidadeAguaRouter);
 app.use('/usuarios', usuarioRouter);
 app.use('/cargos', cargoRouter);
 app.use('/relatorios', relatorioRouter);
+app.use('/logs', logRouter);
 
 
 // --- INICIALIZAÇÃO DO SERVIDOR ---

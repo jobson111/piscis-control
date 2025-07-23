@@ -1,6 +1,8 @@
 // backend/src/controllers/UsuarioController.js
 const db = require('../config/db');
 const bcrypt = require('bcryptjs');
+const registrarLog = require('../helpers/logHelper'); // Importe a ferramenta de log
+
 
 // Lista todos os usuários da piscicultura do admin logado
 exports.list = async (req, res) => {
@@ -24,7 +26,7 @@ exports.list = async (req, res) => {
 
 // Cria um novo usuário (convite)
 exports.create = async (req, res) => {
-    const { pisciculturaId } = req.user;
+    const { pisciculturaId, userId, nome: nomeUsuario } = req.user;
     const { nome, email, senha, cargo_id } = req.body;
     
     if (!nome || !email || !senha || !cargo_id) {
@@ -50,6 +52,13 @@ exports.create = async (req, res) => {
         );
 
         await client.query('COMMIT');
+        // 2. Registamos a ação no log com as variáveis corretas e o campo certo
+        await registrarLog(
+            pisciculturaId, 
+            userId, 
+            nomeUsuario, 
+            `Criou o usuario '${nome}' (ID: ${novoUsuarioId}).`
+        );
         res.status(201).json({ success: true, message: 'Usuário criado com sucesso.' });
     } catch (error) {
         await client.query('ROLLBACK');

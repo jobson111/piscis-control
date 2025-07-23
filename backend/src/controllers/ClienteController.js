@@ -1,6 +1,8 @@
 // backend/src/controllers/ClienteController.js
 
 const db = require('../config/db');
+const registrarLog = require('../helpers/logHelper'); // 1. Importamos a nossa nova ferramenta
+
 
 // --- CRIAR um novo cliente ---
 exports.create = async (req, res) => {
@@ -24,6 +26,10 @@ exports.create = async (req, res) => {
         ];
 
         const result = await db.query(sql, values);
+
+        // 2. Registamos a ação no log
+        await registrarLog(pisciculturaId, userId, nomeUsuario, `Criou o cliente '${novoCliente.nome}' (ID: ${novoCliente.id}).`);
+
         res.status(201).json(result.rows[0]);
     } catch (error) {
         console.error('Erro ao criar cliente:', error);
@@ -95,6 +101,11 @@ exports.update = async (req, res) => {
         if (result.rowCount === 0) {
             return res.status(404).json({ error: 'Cliente não encontrado ou não pertence à sua piscicultura.' });
         }
+
+        // 2. Registamos a ação no log
+        await registrarLog(pisciculturaId, userId, nomeUsuario, `Atualizou os dados do cliente '${result.rows[0].nome}' (ID: ${id}).`);
+
+
         res.status(200).json(result.rows[0]);
     } catch (error) {
         console.error('Erro ao atualizar cliente:', error);
@@ -115,6 +126,11 @@ exports.delete = async (req, res) => {
         if (result.rowCount === 0) {
             return res.status(404).json({ error: 'Cliente não encontrado ou não pertence à sua piscicultura.' });
         }
+
+        // 2. Registamos a ação no log
+        await registrarLog(pisciculturaId, userId, nomeUsuario, `Apagou o cliente '${nomeClienteApagado}' (ID: ${id}).`);
+
+
         res.status(204).send();
     } catch (error) {
         console.error('Erro ao deletar cliente:', error);
