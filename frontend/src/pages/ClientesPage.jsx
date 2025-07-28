@@ -1,12 +1,11 @@
-// src/pages/ClientesPage.jsx (VERSÃO FINAL)
+// src/pages/ClientesPage.jsx (VERSÃO FINAL E COMPLETA)
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Box, Typography, Button, CircularProgress, Modal } from '@mui/material';
 import api from '../services/api';
 import ClienteList from '../components/ClienteList';
 import ClienteForm from '../components/ClienteForm';
-import ProtectedComponent from '../components/ProtectedComponent'; // 1. Importamos nosso verificador
-
+import ProtectedComponent from '../components/ProtectedComponent';
 
 const style = {
     position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
@@ -20,32 +19,38 @@ function ClientesPage() {
     const [openModal, setOpenModal] = useState(false);
     const [clienteParaEditar, setClienteParaEditar] = useState(null);
 
-    const fetchClientes = () => {
-        setLoading(true);
-        api.get('/clientes')
-            .then(response => setClientes(response.data))
-            .catch(error => console.error("Erro ao buscar clientes:", error))
-            .finally(() => setLoading(false));
-    };
+    const fetchClientes = useCallback(async () => {
+        try {
+            const response = await api.get('/clientes');
+            setClientes(response.data);
+        } catch (error) {
+            console.error("Erro ao buscar clientes:", error);
+            alert("Não foi possível carregar a lista de clientes.");
+        }
+    }, []);
 
     useEffect(() => {
-        fetchClientes();
-    }, []);
+        setLoading(true);
+        fetchClientes().finally(() => setLoading(false));
+    }, [fetchClientes]);
 
     const handleOpenModal = (cliente = null) => {
         setClienteParaEditar(cliente);
         setOpenModal(true);
     };
-    const handleCloseModal = () => setOpenModal(false);
+    const handleCloseModal = () => {
+        setClienteParaEditar(null);
+        setOpenModal(false);
+    };
 
     const handleSave = async (clienteData) => {
         try {
-            if (clienteData.id) { // Se tem ID, é uma atualização (PUT)
+            if (clienteData.id) {
                 await api.put(`/clientes/${clienteData.id}`, clienteData);
-            } else { // Se não tem ID, é uma criação (POST)
+            } else {
                 await api.post('/clientes', clienteData);
             }
-            fetchClientes(); // Recarrega a lista
+            await fetchClientes();
             handleCloseModal();
         } catch (error) {
             console.error('Erro ao salvar cliente:', error);
@@ -57,7 +62,7 @@ function ClientesPage() {
         if (window.confirm('Tem certeza que deseja apagar este cliente?')) {
             try {
                 await api.delete(`/clientes/${id}`);
-                fetchClientes(); // Recarrega a lista
+                await fetchClientes();
             } catch (error) {
                 console.error('Erro ao apagar cliente:', error);
                 alert('Falha ao apagar cliente.');
@@ -65,7 +70,7 @@ function ClientesPage() {
         }
     };
 
-    if (loading) return <CircularProgress />;
+    if (loading) return <CircularProgress sx={{ display: 'block', mx: 'auto', mt: 4 }} />;
 
     return (
         <Box>
@@ -74,7 +79,6 @@ function ClientesPage() {
                 <ProtectedComponent requiredPermission="clientes:criar">
                     <Button variant="contained" onClick={() => handleOpenModal()}>Adicionar Cliente</Button>
                 </ProtectedComponent>
-
             </Box>
             
             <ClienteList clientes={clientes} onEdit={handleOpenModal} onDelete={handleDelete} />

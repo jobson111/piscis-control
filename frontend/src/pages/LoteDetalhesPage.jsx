@@ -1,6 +1,6 @@
 // src/pages/LoteDetalhesPage.jsx (VERSÃO FINAL COM CRUD DE ALIMENTAÇÃO)
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback  } from 'react';
 import { useParams, Link as RouterLink, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { 
@@ -29,39 +29,43 @@ function LoteDetalhesPage() {
     const [openAlimentacaoModal, setOpenAlimentacaoModal] = useState(false);
     const [alimentacaoParaEditar, setAlimentacaoParaEditar] = useState(null);
 
-    useEffect(() => {
-        async function fetchData() {
-            setLoading(true);
-            try {
-                // 1. Busca os dados ESSENCIAIS primeiro.
-                const [loteResponse, biometriasResponse, alimentacaoResponse] = await Promise.all([
-                    api.get(`/lotes/${loteId}`),
-                    api.get(`/biometrias?lote_id=${loteId}`),
-                    api.get(`/alimentacao?lote_id=${loteId}`)
-                ]);
-                
-                setLote(loteResponse.data);
-                setBiometrias(biometriasResponse.data);
-                setRegistrosAlimentacao(alimentacaoResponse.data);
+       // 2. A função fetchData agora é definida aqui, fora do useEffect
+    const fetchData = useCallback(async () => {
+        try {
+            // 1. Busca os dados ESSENCIAIS primeiro.
+            const [loteResponse, biometriasResponse, alimentacaoResponse] = await Promise.all([
+                api.get(`/lotes/${loteId}`),
+                api.get(`/biometrias?lote_id=${loteId}`),
+                api.get(`/alimentacao?lote_id=${loteId}`)
+            ]);
+            
+            setLote(loteResponse.data);
+            setBiometrias(biometriasResponse.data);
+            setRegistrosAlimentacao(alimentacaoResponse.data);
 
-                // 2. SÓ TENTA buscar a projeção se o lote estiver ATIVO.
-                if (loteResponse.data.status === 'Ativo') {
-                    const projecaoResponse = await api.get(`/lotes/${loteId}/projecao`);
-                    setProjecaoCrescimento(projecaoResponse.data);
-                }
-
-            } catch (error) {
-                console.error("Erro ao buscar dados do lote:", error);
-                if (error.response?.status === 404) {
-                    alert("Lote não encontrado ou acesso não autorizado.");
-                    navigate(-1);
-                }
-            } finally {
-                setLoading(false);
+            // 2. SÓ TENTA buscar a projeção se o lote estiver ATIVO.
+            if (loteResponse.data.status === 'Ativo') {
+                const projecaoResponse = await api.get(`/lotes/${loteId}/projecao`);
+                setProjecaoCrescimento(projecaoResponse.data);
+            } else {
+                setProjecaoCrescimento([]); // Garante que a projeção fica vazia para lotes inativos
             }
+
+        } catch (error) {
+            console.error("Erro ao buscar dados do lote:", error);
+            if (error.response?.status === 404) {
+                alert("Lote não encontrado ou acesso não autorizado.");
+                navigate(-1);
+            }
+        } finally {
+            setLoading(false);
         }
-        fetchData();
     }, [loteId, navigate]);
+
+    useEffect(() => {
+        setLoading(true);
+        fetchData();
+    }, [fetchData]);
 
 // Prepara os dados para o gráfico
   const pontosReaisGrafico = biometrias.map(bio => {
