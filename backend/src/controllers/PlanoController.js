@@ -3,9 +3,11 @@
 const db = require('../config/db');
 
 // Lista todos os planos ativos com suas opções de preço aninhadas
+// Lista todos os planos ativos com suas opções de preço aninhadas
 exports.list = async (req, res) => {
     try {
-        // A MUDANÇA ESTÁ DENTRO DO jsonb_build_object
+        // Esta consulta usa LEFT JOIN para garantir que todos os planos sejam retornados,
+        // mesmo que ainda não tenham preços configurados.
         const sql = `
             SELECT 
                 p.id,
@@ -13,24 +15,28 @@ exports.list = async (req, res) => {
                 p.limite_tanques,
                 p.limite_usuarios,
                 p.permite_relatorios_avancados,
-                jsonb_agg(
-                    jsonb_build_object(
-                        'id', pp.id,
-                        'ciclo_cobranca', pp.ciclo_cobranca,
-                        'preco', pp.preco,
-                        'gateway_price_id', pp.gateway_price_id -- A LINHA QUE FALTAVA
-                    ) ORDER BY pp.preco
+                -- A função FILTER garante que não haverá erro se um plano não tiver preços
+                COALESCE(
+                    jsonb_agg(
+                        jsonb_build_object(
+                            'id', pp.id,
+                            'ciclo_cobranca', pp.ciclo_cobranca,
+                            'preco', pp.preco,
+                            'gateway_id', pp.gateway_id
+                        ) ORDER BY pp.preco
+                    ) FILTER (WHERE pp.id IS NOT NULL),
+                    '[]'::jsonb
                 ) as precos
             FROM 
                 planos p
-            JOIN 
-                precos_planos pp ON p.id = pp.plano_id
+            LEFT JOIN 
+                precos_planos pp ON p.id = pp.plano_id AND pp.ativo = TRUE
             WHERE 
-                p.ativo = TRUE AND pp.ativo = TRUE
+                p.ativo = TRUE
             GROUP BY 
                 p.id
             ORDER BY 
-                (SELECT MIN(pr.preco) FROM precos_planos pr WHERE pr.plano_id = p.id AND pr.ciclo_cobranca = 'MENSAL');
+                p.id;
         `;
         const result = await db.query(sql);
         res.status(200).json(result.rows);
