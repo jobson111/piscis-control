@@ -1,17 +1,40 @@
-// backend/src/routes/venda.routes.js (VERSÃO CORRIGIDA)
+// backend/src/routes/venda.routes.js (VERSÃO FINAL E CORRIGIDA)
 
 const { Router } = require('express');
 const VendaController = require('../controllers/VendaController');
 const authMiddleware = require('../middleware/authMiddleware');
-const checkPermission = require('../middleware/permissionMiddleware'); // 1. Importa
-
+const checkPermission = require('../middleware/permissionMiddleware');
 
 const vendaRouter = Router();
 
-// REMOVEMOS a linha 'vendaRouter.use(authMiddleware);'
+// Aplica a autenticação a todas as rotas deste ficheiro
+vendaRouter.use(authMiddleware);
 
-// E aplicamos o middleware individualmente em cada rota que precisa de proteção
-vendaRouter.post('/', authMiddleware, checkPermission('vendas:criar'), VendaController.create);
-vendaRouter.get('/', authMiddleware, checkPermission('vendas:ler'), VendaController.list);
+// --- ROTAS ---
+
+// A rota mais específica vem primeiro para evitar conflitos.
+vendaRouter.get(
+    '/ultima-nota', 
+    checkPermission('vendas:ler'), 
+    VendaController.getUltimaNotaFiscal
+);
+
+// A rota para criar uma nova venda.
+vendaRouter.post(
+    '/', 
+    checkPermission('vendas:criar'), 
+    VendaController.create
+);
+
+// A rota genérica para listar todas as vendas vem por último.
+vendaRouter.get(
+    '/', 
+    checkPermission('vendas:ler'), 
+    VendaController.list
+);
+
+// Futuramente, as rotas de update e delete viriam aqui.
+// vendaRouter.put('/:id', checkPermission('vendas:editar'), VendaController.update);
+// vendaRouter.delete('/:id', checkPermission('vendas:apagar'), VendaController.delete);
 
 module.exports = vendaRouter;

@@ -147,3 +147,16 @@ exports.list = async (req, res) => {
         res.status(500).json({ error: 'Erro interno do servidor.' });
     }
 };
+
+exports.getUltimaNotaFiscal = async (req, res) => {
+    const { pisciculturaId } = req.user;
+    try {
+        const result = await db.query(
+            "SELECT nr_nota_fiscal FROM vendas WHERE piscicultura_id = $1 AND nr_nota_fiscal IS NOT NULL ORDER BY id DESC LIMIT 1",
+            [pisciculturaId]
+        );
+        res.status(200).json(result.rows[0] || { nr_nota_fiscal: 'Nenhuma' });
+    } catch (error) {
+        res.status(500).json({ error: 'Erro interno do servidor.' });
+    }
+};
