@@ -1,13 +1,10 @@
-// backend/src/index.js (VERSÃO FINAL E CORRIGIDA)
+// backend/src.js/index.js (VERSÃO FINAL E COMPLETA)
 
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
-// --- IMPORTAÇÕES ---
-
-
-// Importamos todos os nossos ROUTERS
+// --- IMPORTAÇÃO DE TODOS OS ROUTERS ATIVOS ---
 const authRouter = require('./routes/auth.routes');
 const planoRouter = require('./routes/plano.routes');
 const pisciculturaRouter = require('./routes/piscicultura.routes');
@@ -31,28 +28,20 @@ const cargoRouter = require('./routes/cargo.routes');
 const dashboardRouter = require('./routes/dashboard.routes');
 const entradaPeixesRouter = require('./routes/entradaPeixes.routes');
 const logRouter = require('./routes/log.routes');
-const caktoRouter = require('./routes/cakto.routes');
-
-
-
+const caktoRouter = require('./routes/cakto.routes'); // O nosso novo router
 
 const app = express();
+
+// --- MIDDLEWARES GLOBAIS ---
+// Aplica o CORS para permitir pedidos do nosso frontend
 app.use(cors());
-
-// --- ORDEM DE EXECUÇÃO CRÍTICA ---
-
-// 1. A rota do webhook da Stripe é tratada PRIMEIRO. 
-// Ela usa um parser especial ('corpo bruto') e chama o controller diretamente.
-//app.post('/stripe/webhook', express.raw({type: 'application/json'}), StripeController.handleWebhook);
-
-// 2. Agora, ativamos o parser de JSON para TODAS as outras rotas que virão a seguir.
+// Aplica o parser de JSON para ler o corpo de TODAS as requisições
 app.use(express.json());
 
-// 3. Registamos todas as nossas outras rotas da API, que agora usarão o parser de JSON.
+
+// --- REGISTO DE TODAS AS ROTAS DA API ---
 app.use('/auth', authRouter);
 app.use('/planos', planoRouter);
-//app.use('/assinaturas', assinaturaRouter);
-//app.use('/stripe', stripeRouter); // Rotas normais da Stripe (ex: create-checkout)
 app.use('/dashboard', dashboardRouter);
 app.use('/pisciculturas', pisciculturaRouter);
 app.use('/tanques', tanqueRouter);
