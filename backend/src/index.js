@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
+const CaktoController = require('./controllers/CaktoController');
+
 // --- IMPORTAÇÃO DE TODOS OS ROUTERS ATIVOS ---
 const authRouter = require('./routes/auth.routes');
 const planoRouter = require('./routes/plano.routes');
@@ -37,6 +39,9 @@ const corsOptions = {
   optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));
+
+// A rota do webhook ANTES do express.json() e com o CAMINHO CORRETO
+app.post('/webhooks/cakto', express.json(), CaktoController.handleWebhook);
 
 // Ativa o parser de JSON para ler o corpo de TODAS as requisições
 app.use(express.json());

@@ -33,6 +33,9 @@ exports.handleWebhook = async (req, res) => {
     const webhookData = req.body;
     const nossoTokenSecreto = process.env.CAKTO_WEBHOOK_SECRET;
 
+    // --- A CORREÇÃO ESTÁ AQUI: Lemos o campo 'secret' ---
+    const tokenRecebido = webhookData.secret;
+
     // 1. Verificação de segurança (simples, com base no token secreto)
     // A Cakto pode ter um método mais robusto, como uma assinatura no cabeçalho.
     // Por agora, vamos assumir que eles enviam um token no corpo.
@@ -46,7 +49,7 @@ exports.handleWebhook = async (req, res) => {
     const client = await db.pool.connect();
     try {
         // Lida com o evento de 'Assinatura Ativada' (ou o nome equivalente da Cakto)
-        if (webhookData.event_type === 'assinatura.ativada') {
+        if (webhookData.event_type === 'subscription_activated') {
             const emailCliente = webhookData.customer.email;
             const idOfertaCakto = webhookData.offer.id; // ID da oferta/preço na Cakto
 
