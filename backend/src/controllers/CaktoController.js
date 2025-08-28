@@ -5,56 +5,31 @@ const registrarLog = require('../helpers/logHelper');
 
 
 
+
+
+// --- Função para gerar o Link de Pagamento (Checkout) ---
 exports.createCheckoutLink = async (req, res) => {
-    const { pisciculturaId, email, nome } = req.user;
     const { preco_id } = req.body;
 
-    const client = await db.pool.connect();
     try {
-        await client.query('BEGIN');
+        // Busca o ID da oferta que guardámos no nosso banco de dados
+        const precoResult = await db.query(
+            "SELECT gateway_id FROM precos_planos WHERE id = $1",
+            [preco_id]
+        );
 
-        // 1. Busca os dados da nossa piscicultura e do preço escolhido
-        const pisciculturaResult = await client.query('SELECT * FROM pisciculturas WHERE id = $1', [pisciculturaId]);
-        if (pisciculturaResult.rowCount === 0) throw new Error('Piscicultura não encontrada.');
-        
-        const piscicultura = pisciculturaResult.rows[0];
-        let gatewayCustomerId = piscicultura.gateway_customer_id;
-
-        // 2. Se a piscicultura ainda não tem um ID da Cakto, cria um agora
-        if (!gatewayCustomerId) {
-            console.log(`--- A criar novo cliente na Cakto para o email: ${email}`);
-            const caktoCustomerPayload = {
-                name: nome,
-                email: email,
-                doc_number: piscicultura.cnpj || '' // Supondo que temos o CNPJ
-            };
-            const customerResponse = await caktoApi.post('/customers', caktoCustomerPayload);
-            gatewayCustomerId = customerResponse.data.id;
-
-            // 3. Salva o novo ID da Cakto no nosso banco de dados
-            await client.query('UPDATE pisciculturas SET gateway_customer_id = $1 WHERE id = $2', [gatewayCustomerId, pisciculturaId]);
-            console.log(`--- Cliente Cakto ID [${gatewayCustomerId}] salvo com sucesso.`);
-        }
-
-        // 4. Busca o ID da oferta (gateway_id) do nosso banco
-        const precoResult = await client.query("SELECT gateway_id FROM precos_planos WHERE id = $1", [preco_id]);
         if (precoResult.rowCount === 0 || !precoResult.rows[0].gateway_id) {
-            throw new Error('Link de pagamento para este plano não foi configurado.');
+            return res.status(404).json({ error: 'Link de pagamento para este plano não foi configurado no sistema.' });
         }
-        const gatewayOfferId = precoResult.rows[0].gateway_id;
 
-        // 5. Monta o link de checkout final
-        const checkoutLink = `https://pay.cakto.com.br/${gatewayOfferId}?customer_id=${gatewayCustomerId}`;
-        
-        await client.query('COMMIT');
+        // Monta o link de checkout da Cakto diretamente
+        const checkoutLink = `https://pay.cakto.com.br/${precoResult.rows[0].gateway_id}`;
+
         res.status(200).json({ checkoutUrl: checkoutLink });
 
     } catch (error) {
-        await client.query('ROLLBACK');
-        console.error("Erro ao criar link de checkout da Cakto:", error.response ? error.response.data : error.message);
+        console.error("Erro ao criar link de checkout da Cakto:", error);
         res.status(500).json({ error: 'Erro ao comunicar com o sistema de pagamento.' });
-    } finally {
-        client.release();
     }
 };
 
