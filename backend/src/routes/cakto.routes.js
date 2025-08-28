@@ -1,4 +1,4 @@
-// backend/src/routes/cakto.routes.js (VERSÃO FINAL E CORRIGIDA)
+// backend/src/routes/cakto.routes.js (VERSÃO FINAL)
 
 const { Router } = require('express');
 const CaktoController = require('../controllers/CaktoController');
@@ -6,14 +6,10 @@ const authMiddleware = require('../middleware/authMiddleware');
 
 const caktoRouter = Router();
 
-// Rota para criar o link de checkout.
-// Precisa que o usuário esteja logado, por isso usa o nosso authMiddleware.
+// Rota que o nosso frontend chama, precisa que o usuário esteja logado
 caktoRouter.post('/create-checkout-link', authMiddleware, CaktoController.createCheckoutLink);
 
-// Rota para o webhook.
-// É uma rota PÚBLICA, pois é a Cakto que a chama. A segurança é feita
-// pela verificação do token secreto DENTRO do controller.
-// Não usa o nosso authMiddleware.
+// Rota que a Cakto chama (webhook). É pública, a segurança é feita dentro do controller.
 caktoRouter.post('/webhook', CaktoController.handleWebhook);
 
 module.exports = caktoRouter;
