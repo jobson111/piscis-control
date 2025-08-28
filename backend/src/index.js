@@ -42,7 +42,7 @@ app.use(cors());
 // --- CONFIGURAÇÃO DE CORS PARA PRODUÇÃO ---
 const corsOptions = {
   // SUBSTITUA PELA SUA URL EXATA DA VERCEL
-  origin: process.env.FRONTEND_URL || 'https://piscis-control.vercel.app', 
+  origin: 'https://piscis-control.vercel.app', 
   optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));
