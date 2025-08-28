@@ -4,6 +4,9 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
+
+// Importamos o Controller da Cakto diretamente para o webhook
+const CaktoController = require('./controllers/CaktoController');
 // --- IMPORTAÇÕES ---
 //const StripeController = require('./controllers/StripeController');
 const authRouter = require('./routes/auth.routes');
@@ -47,6 +50,10 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 // --- FIM DA CONFIGURAÇÃO ---
+// 1. A rota do webhook da Cakto é tratada PRIMEIRO. 
+// Como a Cakto envia JSON, podemos usar express.json() aqui, mas é mais seguro
+// declará-la antes das outras para garantir prioridade.
+app.post('/cakto/webhook', express.json(), CaktoController.handleWebhook);
 
 app.use(express.json());
 
