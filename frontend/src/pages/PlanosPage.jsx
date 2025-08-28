@@ -1,5 +1,3 @@
-// src/pages/PlanosPage.jsx (VERSÃO FINAL E COMPLETA PARA A CAKTO)
-
 import { useState, useEffect } from 'react';
 import { 
     Box, Typography, CircularProgress, Grid, Card, CardHeader, CardContent, 
@@ -32,8 +30,29 @@ function PlanosPage() {
         }
     };
 
+    // --- FUNÇÃO DE ASSINATURA COMPLETA E CORRETA ---
     const handleSubscribe = async (precoId) => {
-        // ... (A nossa lógica de subscrição que será ligada à Cakto)
+        if (!precoId) {
+            alert("Este plano de preços ainda não está configurado para pagamento. Contacte o suporte.");
+            return;
+        }
+        if (!window.confirm("Você será redirecionado para o nosso ambiente de pagamento seguro. Deseja continuar?")) return;
+
+        try {
+            // Chama o nosso backend para obter o link de checkout da Cakto
+            const response = await api.post('/cakto/create-checkout-link', { preco_id: precoId });
+            const { checkoutUrl } = response.data;
+
+            if (checkoutUrl) {
+                // Redireciona o usuário para a página de pagamento da Cakto
+                window.location.href = checkoutUrl;
+            } else {
+                throw new Error("URL de checkout não recebida do servidor.");
+            }
+        } catch (error) {
+            console.error('Erro no processo de assinatura:', error);
+            alert('Não foi possível iniciar o processo de pagamento.');
+        }
     };
 
     if (loading) return <CircularProgress sx={{ display: 'block', mx: 'auto', mt: 4 }} />;
@@ -42,7 +61,7 @@ function PlanosPage() {
         <Box>
             <Typography variant="h4" gutterBottom align="center">Nossos Planos</Typography>
             <Typography variant="h6" color="text.secondary" align="center" sx={{ mb: 2 }}>
-                Comece com um teste gratuito de 30 dias do plano Profissional.
+                Comece com um teste gratuito de 30 dias.
             </Typography>
             
             <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
@@ -53,7 +72,7 @@ function PlanosPage() {
                     aria-label="ciclo de pagamento"
                 >
                     <ToggleButton value="MENSAL" aria-label="mensal">Mensal</ToggleButton>
-                    <ToggleButton value="ANUAL" aria-label="anual">Anual</ToggleButton>
+                    <ToggleButton value="ANUAL" aria-label="anual">Anual (com desconto)</ToggleButton>
                 </ToggleButtonGroup>
             </Box>
 
@@ -63,6 +82,16 @@ function PlanosPage() {
                     const precoMensal = plano.precos.find(p => p.ciclo_cobranca === 'MENSAL');
                     
                     const isCurrentPlan = user?.piscicultura?.plano_id === plano.id;
+                    const isTrial = user?.piscicultura?.status_assinatura === 'TRIAL';
+                    const isActiveSub = isCurrentPlan && user?.piscicultura?.status_assinatura === 'ATIVO';
+
+                    let buttonText = 'Selecionar Plano';
+                    if (isActiveSub) {
+                        buttonText = 'Seu Plano Atual';
+                    } else if (isTrial) {
+                        buttonText = 'Ativar Assinatura';
+                    }
+                    
                     const isProfissional = plano.nome === 'Profissional';
                     
                     let precoDisplay = 'N/A';
@@ -105,8 +134,13 @@ function PlanosPage() {
                                 </List>
                             </CardContent>
                             <CardActions>
-                                <Button fullWidth variant={isCurrentPlan ? 'outlined' : 'contained'} onClick={() => handleSubscribe(precoCiclo?.id)} disabled={isCurrentPlan}>
-                                    {isCurrentPlan ? 'Seu Plano Atual' : 'Selecionar Plano'}
+                                <Button 
+                                    fullWidth 
+                                    variant={isActiveSub ? 'outlined' : 'contained'} 
+                                    onClick={() => handleSubscribe(precoCiclo?.id)} 
+                                    disabled={isActiveSub}
+                                >
+                                    {buttonText}
                                 </Button>
                             </CardActions>
                         </Card>
