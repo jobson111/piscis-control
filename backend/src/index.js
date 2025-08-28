@@ -1,9 +1,11 @@
-// backend/src/index.js (VERSÃO FINAL, LIMPA E CORRIGIDA)
+// backend/src/index.js (VERSÃO FINAL COM CORS FLEXÍVEL)
 
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
+// --- IMPORTAÇÕES (coloque todas as suas aqui) ---
+const CaktoController = require('./controllers/CaktoController');
 // --- IMPORTAÇÃO DE TODOS OS ROUTERS ATIVOS ---
 const authRouter = require('./routes/auth.routes');
 const planoRouter = require('./routes/plano.routes');
@@ -29,10 +31,10 @@ const dashboardRouter = require('./routes/dashboard.routes');
 const entradaPeixesRouter = require('./routes/entradaPeixes.routes');
 const logRouter = require('./routes/log.routes');
 const caktoRouter = require('./routes/cakto.routes');
+// ... etc ...
 
 const app = express();
 
-// --- MIDDLEWARES GLOBAIS ---
 // --- CONFIGURAÇÃO DE CORS FINAL E ROBUSTA ---
 // Lista de todos os endereços que têm permissão para aceder à nossa API
 const allowedOrigins = [
@@ -58,9 +60,10 @@ const corsOptions = {
 app.use(cors(corsOptions));
 // --- FIM DA CONFIGURAÇÃO ---
 
-// Ativa o parser de JSON para ler o corpo de TODAS as requisições
-app.use(express.json());
 
+// --- ORDEM DE EXECUÇÃO CRÍTICA ---
+app.post('/webhooks/cakto', express.json(), CaktoController.handleWebhook);
+app.use(express.json());
 
 // --- REGISTO DE TODAS AS ROTAS DA API ---
 app.use('/auth', authRouter);
@@ -90,7 +93,6 @@ app.use('/logs', logRouter);
 app.use('/cakto', caktoRouter); 
 
 
-// --- INICIALIZAÇÃO DO SERVIDOR ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Servidor a rodar na porta ${PORT}`);
