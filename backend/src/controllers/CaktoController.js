@@ -28,52 +28,52 @@ exports.createCheckoutLink = async (req, res) => {
 };
 
 
-// --- Função para receber e processar os Webhooks da Cakto ---
+// --- A FUNÇÃO DE WEBHOOK FINAL E CORRIGIDA ---
 exports.handleWebhook = async (req, res) => {
     const webhookData = req.body;
     const nossoTokenSecreto = process.env.CAKTO_WEBHOOK_SECRET;
 
-    // --- A CORREÇÃO ESTÁ AQUI: Lemos o campo 'secret' ---
-    const tokenRecebido = webhookData.secret;
-
-    // 1. Verificação de segurança (simples, com base no token secreto)
-    // A Cakto pode ter um método mais robusto, como uma assinatura no cabeçalho.
-    // Por agora, vamos assumir que eles enviam um token no corpo.
-    if (tokenRecebido !== nossoTokenSecreto) { // Verifique o nome real do campo
-        console.warn("⚠️ Webhook da Cakto recebido com token inválido.");
-        return res.status(403).json({ error: 'Acesso negado.' });
+    // 1. Verificação de segurança (lendo o campo 'secret')
+    if (webhookData.secret !== nossoTokenSecreto) {
+        console.warn("⚠️ Webhook da Cakto recebido com token de segurança inválido.");
+        return res.status(403).json({ error: 'Token inválido.' });
     }
 
-    console.log(`✅ Webhook da Cakto Recebido: ${webhookData.event_type}`); // Verifique o nome real do campo de evento
+    // 2. Lê o tipo de evento do campo correto ('event')
+    const eventType = webhookData.event;
+    console.log(`✅ Webhook da Cakto verificado com sucesso. Evento: ${eventType}`);
 
     const client = await db.pool.connect();
     try {
-        // Lida com o evento de 'Assinatura Ativada' (ou o nome equivalente da Cakto)
-        if (webhookData.event_type === 'subscription_activated') {
-            const emailCliente = webhookData.customer.email;
-            const idOfertaCakto = webhookData.offer.id; // ID da oferta/preço na Cakto
+        // Focamos no evento que nos interessa (pode ser 'subscription_activated' ou similar na Cakto)
+        if (eventType === 'subscription_created' || eventType === 'subscription_activated') { // Use o nome real do evento de sucesso
+            
+            const dadosDoEvento = webhookData.data;
+            const emailCliente = dadosDoEvento.customer.email;
+            const idOfertaCakto = dadosDoEvento.offer.id;
 
             console.log(`--- [AÇÃO] Processando assinatura ativada para o cliente com email [${emailCliente}]`);
             
             await client.query('BEGIN');
 
-            // Encontra o nosso preço interno com base no ID da Cakto
+            // 3. Encontra a piscicultura no NOSSO banco de dados usando o email
+            const usuarioResult = await client.query("SELECT piscicultura_id FROM usuarios WHERE email = $1", [emailCliente]);
+            if (usuarioResult.rowCount === 0) {
+                throw new Error(`Utilizador com email [${emailCliente}] não foi encontrado no nosso sistema.`);
+            }
+            const pisciculturaId = usuarioResult.rows[0].piscicultura_id;
+            console.log(`> Piscicultura ID [${pisciculturaId}] encontrada para o email.`);
+
+            // Encontra o nosso plano interno com base no ID da oferta da Cakto
             const precoResult = await client.query("SELECT id, plano_id FROM precos_planos WHERE gateway_id = $1", [idOfertaCakto]);
             if (precoResult.rowCount === 0) {
-                throw new Error(`ID de oferta da Cakto [${idOfertaCakto}] não encontrado no nosso banco de dados.`);
+                throw new Error(`ID de oferta da Cakto [${idOfertaCakto}] não encontrado na nossa tabela precos_planos.`);
             }
             const { id: preco_id, plano_id } = precoResult.rows[0];
 
-            // Encontra a piscicultura pelo email do usuário dono
-            const usuarioResult = await client.query("SELECT piscicultura_id FROM usuarios WHERE email = $1", [emailCliente]);
-            if (usuarioResult.rowCount === 0) {
-                throw new Error(`Usuário com email [${emailCliente}] não encontrado.`);
-            }
-            const pisciculturaId = usuarioResult.rows[0].piscicultura_id;
-            
             // Define a nova data de expiração (ex: 1 ano a partir de agora)
             const dataExpiracao = new Date();
-            // A lógica aqui dependerá do ciclo de cobrança (mensal, anual)
+            // Esta lógica precisa ser ajustada para ler o ciclo (mensal/anual) do plano
             dataExpiracao.setFullYear(dataExpiracao.getFullYear() + 1);
 
             const updateResult = await client.query(
