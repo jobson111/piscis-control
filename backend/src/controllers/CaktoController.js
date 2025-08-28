@@ -39,7 +39,7 @@ exports.handleWebhook = async (req, res) => {
     // 1. Verificação de segurança (simples, com base no token secreto)
     // A Cakto pode ter um método mais robusto, como uma assinatura no cabeçalho.
     // Por agora, vamos assumir que eles enviam um token no corpo.
-    if (webhookData.secret_token !== nossoTokenSecreto) { // Verifique o nome real do campo
+    if (tokenRecebido !== nossoTokenSecreto) { // Verifique o nome real do campo
         console.warn("⚠️ Webhook da Cakto recebido com token inválido.");
         return res.status(403).json({ error: 'Acesso negado.' });
     }
