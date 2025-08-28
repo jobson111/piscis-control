@@ -33,12 +33,30 @@ const caktoRouter = require('./routes/cakto.routes');
 const app = express();
 
 // --- MIDDLEWARES GLOBAIS ---
-// Aplica o CORS para permitir pedidos do nosso frontend
+// --- CONFIGURAÇÃO DE CORS FINAL E ROBUSTA ---
+// Lista de todos os endereços que têm permissão para aceder à nossa API
+const allowedOrigins = [
+    'http://localhost:5173', // Para o nosso desenvolvimento local
+    'https://piscis-control.vercel.app', // A sua URL de produção sem a barra
+    'https://piscis-control.vercel.app/'  // A sua URL de produção COM a barra
+];
+
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: function (origin, callback) {
+    // Permite pedidos sem 'origin' (como o Insomnia ou apps móveis)
+    if (!origin) return callback(null, true);
+    
+    // Verifica se a origem do pedido está na nossa lista de permissões
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'A política de CORS para este site não permite acesso a partir da origem especificada.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
   optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));
+// --- FIM DA CONFIGURAÇÃO ---
 
 // Ativa o parser de JSON para ler o corpo de TODAS as requisições
 app.use(express.json());
