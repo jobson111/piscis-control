@@ -17,14 +17,15 @@ exports.register = async (req, res) => {
     try {
         await client.query('BEGIN');
 
-        // Cria a piscicultura
-        const pisciculturaResult = await client.query(
-            'INSERT INTO pisciculturas (nome_fantasia, cnpj) VALUES ($1, $2) RETURNING id',
-            [nomePiscicultura, cnpj]
-        );
+        // 1. Cria a nova piscicultura com plano_id NULO e status TRIAL
+        const pisciculturaSql = `
+            INSERT INTO pisciculturas (nome_fantasia, cnpj, plano_id, status_assinatura, data_expiracao_assinatura) 
+            VALUES ($1, $2, NULL, 'TRIAL', NOW() + interval '30 days') RETURNING id;
+        `;
+        const pisciculturaResult = await client.query(pisciculturaSql, [nomePiscicultura, cnpj]);
         const novaPisciculturaId = pisciculturaResult.rows[0].id;
 
-        // Cria o usuário
+        // 2. Cria o usuário Dono
         const salt = await bcrypt.genSalt(10);
         const senhaHash = await bcrypt.hash(senha, salt);
         const usuarioResult = await client.query(
@@ -33,31 +34,19 @@ exports.register = async (req, res) => {
         );
         const novoUsuarioId = usuarioResult.rows[0].id;
 
-        // Atribui o trial e as permissões de admin (como já tínhamos feito)
-        const planoResult = await client.query("SELECT id FROM planos WHERE nome = 'Profissional'");
-        if (planoResult.rowCount === 0) throw new Error('Plano Profissional padrão não foi encontrado.');
-        const planoTrialId = planoResult.rows[0].id;
-        await client.query(
-            `UPDATE pisciculturas SET plano_id = $1, status_assinatura = 'TRIAL', data_expiracao_assinatura = NOW() + interval '30 days' WHERE id = $2;`,
-            [planoTrialId, novaPisciculturaId]
-        );
+        // 3. Cria o cargo "Administrador" e atribui TODAS as permissões a ele
         const cargoResult = await client.query("INSERT INTO cargos (piscicultura_id, nome, descricao) VALUES ($1, 'Administrador', 'Acesso total.') RETURNING id", [novaPisciculturaId]);
         const adminCargoId = cargoResult.rows[0].id;
         await client.query("INSERT INTO cargo_permissoes (cargo_id, permissao_id) SELECT $1, id FROM permissoes", [adminCargoId]);
         await client.query("INSERT INTO usuario_cargos (usuario_id, cargo_id) VALUES ($1, $2)", [novoUsuarioId, adminCargoId]);
 
         await client.query('COMMIT');
-
-        // --- LOG DA AÇÃO ---
-        // Usamos os dados que acabámos de criar
-        await registrarLog(novaPisciculturaId, novoUsuarioId, nomeUsuario, `Registou a piscicultura '${nomePiscicultura}' e o usuário administrador.`);
-
-        
+        await registrarLog(novaPisciculturaId, novoUsuarioId, nomeUsuario, `Registou a piscicultura '${nomePiscicultura}'.`);
         res.status(201).json({ success: true, message: "Registado com sucesso no período de teste!" });
     } catch (error) {
         await client.query('ROLLBACK');
         console.error('Erro no registro:', error.message);
-        res.status(500).json({ error: 'Erro interno do servidor ao tentar registrar.' });
+        res.status(500).json({ error: 'Erro interno do servidor.' });
     } finally {
         client.release();
     }
