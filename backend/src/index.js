@@ -1,8 +1,8 @@
+// backend/src/index.js (VERSÃO FINAL, LIMPA E CORRIGIDA)
+
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
-
-const CaktoController = require('./controllers/CaktoController');
 
 // --- IMPORTAÇÃO DE TODOS OS ROUTERS ATIVOS ---
 const authRouter = require('./routes/auth.routes');
@@ -28,37 +28,17 @@ const cargoRouter = require('./routes/cargo.routes');
 const dashboardRouter = require('./routes/dashboard.routes');
 const entradaPeixesRouter = require('./routes/entradaPeixes.routes');
 const logRouter = require('./routes/log.routes');
-const caktoRouter = require('./routes/cakto.routes'); // O nosso novo router
+const caktoRouter = require('./routes/cakto.routes');
 
 const app = express();
 
-// --- CONFIGURAÇÃO DE CORS FINAL E ROBUSTA ---
-// Lista de todos os endereços que têm permissão para aceder à nossa API
-const allowedOrigins = [
-    'http://localhost:5173', // Para o nosso desenvolvimento local
-    'https://piscis-control.vercel.app', // A sua URL de produção sem a barra
-    'https://piscis-control.vercel.app/'  // A sua URL de produção COM a barra
-];
-
+// --- MIDDLEWARES GLOBAIS ---
+// Aplica o CORS para permitir pedidos do nosso frontend
 const corsOptions = {
-  origin: function (origin, callback) {
-    // Permite pedidos sem 'origin' (como o Insomnia ou apps móveis)
-    if (!origin) return callback(null, true);
-    
-    // Verifica se a origem do pedido está na nossa lista de permissões
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = 'A política de CORS para este site não permite acesso a partir da origem especificada.';
-      return callback(new Error(msg), false);
-    }
-    return callback(null, true);
-  },
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));
-// --- FIM DA CONFIGURAÇÃO ---
-
-// A rota do webhook ANTES do express.json() e com o CAMINHO CORRETO
-app.post('/webhooks/cakto', express.json(), CaktoController.handleWebhook);
 
 // Ativa o parser de JSON para ler o corpo de TODAS as requisições
 app.use(express.json());
@@ -88,7 +68,8 @@ app.use('/usuarios', usuarioRouter);
 app.use('/cargos', cargoRouter);
 app.use('/relatorios', relatorioRouter);
 app.use('/logs', logRouter);
-app.use('/cakto', caktoRouter);
+// A nossa rota do Cakto, incluindo o webhook, é registada aqui
+app.use('/cakto', caktoRouter); 
 
 
 // --- INICIALIZAÇÃO DO SERVIDOR ---
