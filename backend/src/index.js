@@ -1,19 +1,10 @@
-// backend/src.js/index.js (VERSÃO FINAL E COMPLETA)
-
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
-
-// Importamos o Controller da Cakto diretamente para o webhook
-const CaktoController = require('./controllers/CaktoController');
-// --- IMPORTAÇÕES ---
-//const StripeController = require('./controllers/StripeController');
+// --- IMPORTAÇÃO DE TODOS OS ROUTERS ATIVOS ---
 const authRouter = require('./routes/auth.routes');
-// ... adicione aqui TODOS os seus outros 'require' de routers ...
 const planoRouter = require('./routes/plano.routes');
-//const assinaturaRouter = require('./routes/assinatura.routes');
-//const stripeRouter = require('./routes/stripe.routes');
 const pisciculturaRouter = require('./routes/piscicultura.routes');
 const tanqueRouter = require('./routes/tanque.routes');
 const loteRouter = require('./routes/lote.routes.js');
@@ -35,26 +26,19 @@ const cargoRouter = require('./routes/cargo.routes');
 const dashboardRouter = require('./routes/dashboard.routes');
 const entradaPeixesRouter = require('./routes/entradaPeixes.routes');
 const logRouter = require('./routes/log.routes');
-const caktoRouter = require('./routes/cakto.routes');
+const caktoRouter = require('./routes/cakto.routes'); // O nosso novo router
+
 const app = express();
 
 // --- MIDDLEWARES GLOBAIS ---
-// Aplica o CORS para permitir pedidos do nosso frontend
-app.use(cors());
-// Aplica o parser de JSON para ler o corpo de TODAS as requisições
-// --- CONFIGURAÇÃO DE CORS PARA PRODUÇÃO ---
+// Configuração de CORS para permitir pedidos do nosso frontend
 const corsOptions = {
-  // SUBSTITUA PELA SUA URL EXATA DA VERCEL
-  origin: 'https://piscis-control.vercel.app', 
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));
-// --- FIM DA CONFIGURAÇÃO ---
-// 1. A rota do webhook da Cakto é tratada PRIMEIRO. 
-// Como a Cakto envia JSON, podemos usar express.json() aqui, mas é mais seguro
-// declará-la antes das outras para garantir prioridade.
-app.post('/cakto/webhook', express.json(), CaktoController.handleWebhook);
 
+// Ativa o parser de JSON para ler o corpo de TODAS as requisições
 app.use(express.json());
 
 
